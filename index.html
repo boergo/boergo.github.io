@@ -1,62 +1,601 @@
-<!doctype html>
-<!-- The Time Machine GitHub pages theme was designed and developed by Jon Rohan, on Feb 7, 2012. -->
-<!-- Follow him for fun. http://twitter.com/jonrohan. Tail his code on http://github.com/jonrohan -->
-<html>
+<!DOCTYPE html>
+<html lang="da">
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kort</title>
+  <script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" />
+  <script>window.mapboxgl = maplibregl;</script>
+  <script src="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.css" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body, #map { width: 100%; height: 100%; }
 
-  <link rel="stylesheet" href="stylesheets/stylesheet.css" media="screen"/>
-  <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
-  <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
-  <script type="text/javascript" src="javascripts/script.js"></script>
+    #toolbar {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      padding: 10px;
+      width: 152px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    .section-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: #9e9e9e;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      padding: 2px 2px 0;
+    }
+    .tool-btn {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 6px 9px;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 13px;
+      color: #333;
+      width: 100%;
+      text-align: left;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      user-select: none;
+    }
+    .tool-btn:hover        { background: #f5f5f5; border-color: #bbb; }
+    .tool-btn.active       { background: #e8f0fe; border-color: #4285f4; color: #1558c0; }
+    .tool-btn.delete:hover { background: #fdecea; border-color: #e53935; color: #c62828; }
+    .divider { height: 1px; background: #ebebeb; margin: 2px 0; }
+    .color-row {
+      display: flex;
+      align-items: center;
+      padding: 1px 2px;
+    }
+    .color-row label { flex: 1; font-size: 12px; color: #444; cursor: pointer; }
+    .color-row input[type="color"] {
+      width: 32px; height: 22px;
+      border: 1.5px solid #ddd; border-radius: 4px;
+      padding: 1px; cursor: pointer; background: none;
+    }
 
-  <title>Boergo.github.io</title>
-  <meta name="description" content="boergo.github.io">
+    /* ── Lagkatalog panel ─────────────────────────────────────────────────── */
+    #catalog-panel {
+      position: absolute;
+      top: 0; right: 0;
+      width: 340px; height: 100%;
+      background: #fff;
+      z-index: 11;
+      display: flex;
+      flex-direction: column;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.14);
+      transform: translateX(100%);
+      transition: transform 0.22s ease;
+      font-family: system-ui, -apple-system, sans-serif;
+    }
+    #catalog-panel.open { transform: translateX(0); }
 
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+    #catalog-header {
+      display: flex;
+      align-items: center;
+      padding: 13px 14px 11px;
+      border-bottom: 1px solid #eee;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    #catalog-header h2 { flex: 1; font-size: 14px; font-weight: 700; color: #222; margin: 0; }
+    #catalog-close {
+      background: none; border: none; cursor: pointer;
+      color: #aaa; font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+    }
+    #catalog-close:hover { color: #333; background: #f0f0f0; }
 
+    #catalog-search-wrap {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      flex-shrink: 0;
+    }
+    #catalog-search-wrap input {
+      width: 100%; padding: 7px 10px;
+      border: 1.5px solid #ddd; border-radius: 6px;
+      font-size: 13px; outline: none;
+    }
+    #catalog-search-wrap input:focus { border-color: #4285f4; }
+
+    #catalog-list {
+      flex: 1; overflow-y: auto;
+      padding: 8px 10px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .cat-item {
+      border: 1px solid #e8e8e8;
+      border-radius: 7px;
+      padding: 9px 10px;
+    }
+    .cat-title { font-size: 13px; font-weight: 600; color: #1a1a1a; line-height: 1.35; margin-bottom: 3px; }
+    .cat-desc  { font-size: 11.5px; color: #777; line-height: 1.4; margin-bottom: 7px; }
+    .cat-footer { display: flex; align-items: center; gap: 6px; }
+    .cat-badge {
+      font-size: 10px; font-weight: 700; color: #5a6472;
+      background: #edf0f3; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.3px;
+    }
+    .cat-btn {
+      margin-left: auto;
+      padding: 4px 11px; font-size: 12px; font-weight: 600;
+      border-radius: 5px; border: 1.5px solid #4285f4;
+      background: #fff; color: #4285f4;
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s;
+      white-space: nowrap;
+    }
+    .cat-btn:hover { background: #4285f4; color: #fff; }
+    .cat-btn.added { border-color: #34a853; color: #34a853; }
+    .cat-btn.added:hover { background: #34a853; color: #fff; }
+
+    #catalog-status {
+      text-align: center; color: #aaa;
+      font-size: 12px; padding: 10px 12px;
+      flex-shrink: 0;
+    }
+    #catalog-more {
+      margin: 2px 10px 12px;
+      padding: 7px; font-size: 12px;
+      border: 1.5px solid #ddd; border-radius: 6px;
+      background: #fff; color: #555; cursor: pointer;
+      display: none; flex-shrink: 0;
+    }
+    #catalog-more:hover { background: #f5f5f5; }
+  </style>
 </head>
-
 <body>
+  <div id="map"></div>
 
-  <div class="wrapper">
-    <header>
-      <h1 class="title">Boergo.github.io</h1>
-    </header>
-    <div id="container">
-      <p class="tagline">boergo.github.io</p>
-      <div id="main" role="main">
-        <div class="download-bar">
-        <div class="inner">
-          <a href="https://github.com/boergo" class="code">View Boergo.github.io on GitHub</a>
-        </div>
-        <span class="blc"></span><span class="trc"></span>
-        </div>
-        <article class="markdown-body">
-          <h3>Welcome to GitHub Pages.</h3>
+  <div id="toolbar">
+    <span class="section-label">Tegneværktøjer</span>
+    <button class="tool-btn active" id="btn-select" onclick="setMode('simple_select')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M4 1 L18 13 L11 14.5 L8.5 21 Z"/></svg>
+      Vælg
+    </button>
+    <button class="tool-btn" id="btn-point" onclick="setMode('draw_point')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="7"/></svg>
+      Punkt
+    </button>
+    <button class="tool-btn" id="btn-line" onclick="setMode('draw_line_string')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="4" y1="20" x2="20" y2="4"/></svg>
+      Linje
+    </button>
+    <button class="tool-btn" id="btn-polygon" onclick="setMode('draw_polygon')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><polygon points="12,3 21,18 3,18"/></svg>
+      Flade
+    </button>
 
-<p>Hej Bo</p>
-        </article>
-      </div>
+    <div class="divider"></div>
+    <span class="section-label">Farver</span>
+    <div class="color-row">
+      <label for="fill-color">Fyldfarve</label>
+      <input type="color" id="fill-color" value="#4A90D9" oninput="onColorChange()" />
     </div>
-    <footer>
-      <div class="owner">
+    <div class="color-row">
+      <label for="stroke-color">Kantfarve</label>
+      <input type="color" id="stroke-color" value="#1a5276" oninput="onColorChange()" />
+    </div>
 
-      <p><a href="https://github.com/boergo" class="avatar"><img src="https://secure.gravatar.com/avatar/487a7b109108827ad7270cec46ad1bb6?s=30&amp;d=https://a248.e.akamai.net/assets.github.com%2Fimages%2Fgravatars%2Fgravatar-user-420.png" width="48" height="48"/></a>View <a href="https://github.com/boergo">boergo</a> on <a href="https://www.github.com">GitHub</a></p>
+    <div class="divider"></div>
+    <button class="tool-btn" id="btn-catalog" onclick="toggleCatalog()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <circle cx="3" cy="6" r="0.5" fill="currentColor"/><circle cx="3" cy="12" r="0.5" fill="currentColor"/><circle cx="3" cy="18" r="0.5" fill="currentColor"/>
+      </svg>
+      Lagkatalog
+    </button>
 
-      </div>
-      <div class="creds">
-        <small>This page generated using <a href="https://pages.github.com/">GitHub Pages</a><br/>theme by <a href="http://twitter.com/jonrohan/">Jon Rohan</a></small>
-      </div>
-    </footer>
+    <div class="divider"></div>
+    <button class="tool-btn delete" onclick="deleteSelected()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+      </svg>
+      Slet valgte
+    </button>
   </div>
-  <div class="current-section">
-    <a href="#top">Scroll to top</a>
-    <a href="https://github.com/boergo/boergo.github.io/tarball/master" class="tar">tar</a><a href="https://github.com/boergo/boergo.github.io/zipball/master" class="zip">zip</a><a href="" class="code">source code</a>
-    <p class="name"></p>
+
+  <!-- ── Lagkatalog panel ──────────────────────────────────────────────────── -->
+  <div id="catalog-panel">
+    <div id="catalog-header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round">
+        <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+        <circle cx="3" cy="6" r="0.8" fill="#666"/><circle cx="3" cy="12" r="0.8" fill="#666"/><circle cx="3" cy="18" r="0.8" fill="#666"/>
+      </svg>
+      <h2>Lagkatalog</h2>
+      <button id="catalog-close" onclick="toggleCatalog()" title="Luk">✕</button>
+    </div>
+    <div id="catalog-search-wrap">
+      <input type="text" id="catalog-search" placeholder="Søg i lag…" oninput="catalogSearch(this.value)" />
+    </div>
+    <div id="catalog-list"></div>
+    <div id="catalog-status"></div>
+    <button id="catalog-more" onclick="loadCatalog()">Indlæs flere</button>
   </div>
 
-  
+  <script>
+    // ── Map ───────────────────────────────────────────────────────────────────
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://widget.cdn.septima.dk/latest/data/vectortiles/redata.json',
+      center: [10.2, 56.15],
+      zoom: 7
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
+    map.addControl(new maplibregl.GeolocateControl({
+      positionOptions: { enableHighAccuracy: true },
+      trackUserLocation: true
+    }), 'top-right');
+
+    // ── MapboxDraw (kun til tegning – features flyttes ud ved create) ─────────
+    const draw = new MapboxDraw({ displayControlsDefault: false });
+    map.addControl(draw);
+
+    // ── State ─────────────────────────────────────────────────────────────────
+    const featureStore = new Map(); // id → GeoJSON Feature
+    let selectedId    = null;
+    let currentMode   = 'simple_select';
+    let hitFeature    = false; // forhindrer deselect ved klik på feature
+
+    // ── Hjælpefunktioner til sources ──────────────────────────────────────────
+    function featureCollection(features) {
+      return { type: 'FeatureCollection', features };
+    }
+    function refreshDrawn() {
+      map.getSource('drawn').setData(
+        featureCollection(Array.from(featureStore.values()))
+      );
+    }
+    function refreshSelected() {
+      const f = selectedId ? featureStore.get(selectedId) : null;
+      map.getSource('drawn-selected').setData(
+        featureCollection(f ? [f] : [])
+      );
+    }
+
+    // ── Initialiser sources & layers når kortet er klar ───────────────────────
+    map.on('load', () => {
+
+      map.addSource('drawn', {
+        type: 'geojson',
+        data: featureCollection([])
+      });
+      map.addSource('drawn-selected', {
+        type: 'geojson',
+        data: featureCollection([])
+      });
+
+      // -- Polygon fill --
+      map.addLayer({ id: 'drawn-poly-fill', type: 'fill', source: 'drawn',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        paint: { 'fill-color': ['get', 'fill_color'], 'fill-opacity': 0.35 }
+      });
+      // -- Polygon stroke --
+      map.addLayer({ id: 'drawn-poly-stroke', type: 'line', source: 'drawn',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'stroke_color'], 'line-width': 2 }
+      });
+      // -- Linje --
+      map.addLayer({ id: 'drawn-line', type: 'line', source: 'drawn',
+        filter: ['==', ['geometry-type'], 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'stroke_color'], 'line-width': 2.5 }
+      });
+      // -- Punkt ydre ring (kantfarve) --
+      map.addLayer({ id: 'drawn-pt-outer', type: 'circle', source: 'drawn',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 8, 'circle-color': ['get', 'stroke_color'] }
+      });
+      // -- Punkt indre (fyldfarve) --
+      map.addLayer({ id: 'drawn-pt-inner', type: 'circle', source: 'drawn',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 5.5, 'circle-color': ['get', 'fill_color'] }
+      });
+
+      // -- Selektion: hvid halo + stiplet kant --
+      map.addLayer({ id: 'sel-poly-halo', type: 'line', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': '#fff', 'line-width': 6 }
+      });
+      map.addLayer({ id: 'sel-poly-stroke', type: 'line', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'Polygon'],
+        layout: { 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'stroke_color'], 'line-width': 2, 'line-dasharray': [4, 2] }
+      });
+      map.addLayer({ id: 'sel-line-halo', type: 'line', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#fff', 'line-width': 6 }
+      });
+      map.addLayer({ id: 'sel-line-stroke', type: 'line', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'LineString'],
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': ['get', 'stroke_color'], 'line-width': 2.5, 'line-dasharray': [4, 2] }
+      });
+      map.addLayer({ id: 'sel-pt-halo', type: 'circle', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 13, 'circle-color': '#fff', 'circle-opacity': 0.8 }
+      });
+      map.addLayer({ id: 'sel-pt-outer', type: 'circle', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 9, 'circle-color': ['get', 'stroke_color'] }
+      });
+      map.addLayer({ id: 'sel-pt-inner', type: 'circle', source: 'drawn-selected',
+        filter: ['==', ['geometry-type'], 'Point'],
+        paint: { 'circle-radius': 6, 'circle-color': ['get', 'fill_color'] }
+      });
+
+      // -- Klik til selektion --
+      const clickLayers = [
+        'drawn-poly-fill', 'drawn-poly-stroke',
+        'drawn-line',
+        'drawn-pt-outer', 'drawn-pt-inner',
+        'sel-poly-halo', 'sel-poly-stroke',
+        'sel-line-halo', 'sel-line-stroke',
+        'sel-pt-halo', 'sel-pt-outer', 'sel-pt-inner'
+      ];
+      clickLayers.forEach(lid => {
+        map.on('click', lid, e => {
+          if (currentMode !== 'simple_select') return;
+          hitFeature = true;
+          const fid = e.features[0].properties._fid;
+          if (fid) selectFeature(fid);
+        });
+        map.on('mouseenter', lid, () => {
+          if (currentMode === 'simple_select') map.getCanvas().style.cursor = 'pointer';
+        });
+        map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
+      });
+
+      // Klik på tomt kort → deselect
+      map.on('click', () => {
+        if (hitFeature) { hitFeature = false; return; }
+        if (currentMode === 'simple_select') deselect();
+      });
+    });
+
+    // ── Selektion ─────────────────────────────────────────────────────────────
+    function selectFeature(id) {
+      selectedId = id;
+      const f = featureStore.get(id);
+      if (f) {
+        document.getElementById('fill-color').value   = f.properties.fill_color;
+        document.getElementById('stroke-color').value = f.properties.stroke_color;
+      }
+      refreshSelected();
+    }
+    function deselect() {
+      selectedId = null;
+      refreshSelected();
+    }
+
+    // ── Toolbar ───────────────────────────────────────────────────────────────
+    function setMode(mode) {
+      currentMode = mode;
+      draw.changeMode(mode);
+      updateActiveBtn(mode);
+      if (mode !== 'simple_select') deselect();
+    }
+    function updateActiveBtn(mode) {
+      ['btn-select', 'btn-point', 'btn-line', 'btn-polygon']
+        .forEach(id => document.getElementById(id).classList.remove('active'));
+      const map = { simple_select: 'btn-select', direct_select: 'btn-select',
+                    draw_point: 'btn-point', draw_line_string: 'btn-line', draw_polygon: 'btn-polygon' };
+      if (map[mode]) document.getElementById(map[mode]).classList.add('active');
+    }
+
+    function onColorChange() {
+      if (!selectedId) return;
+      const f = featureStore.get(selectedId);
+      if (!f) return;
+      f.properties.fill_color   = document.getElementById('fill-color').value;
+      f.properties.stroke_color = document.getElementById('stroke-color').value;
+      refreshDrawn();
+      refreshSelected();
+    }
+    function deleteSelected() {
+      if (!selectedId) return;
+      featureStore.delete(selectedId);
+      selectedId = null;
+      refreshDrawn();
+      refreshSelected();
+    }
+
+    // ── Draw events ───────────────────────────────────────────────────────────
+    map.on('draw.create', e => {
+      const fill   = document.getElementById('fill-color').value;
+      const stroke = document.getElementById('stroke-color').value;
+      e.features.forEach(f => {
+        f.properties = { ...f.properties, fill_color: fill, stroke_color: stroke, _fid: String(f.id) };
+        featureStore.set(String(f.id), f);
+        draw.delete([f.id]); // flyt ud af draw, renderer i egne lag
+      });
+      refreshDrawn();
+      setMode('simple_select');
+    });
+
+    map.on('draw.modechange', e => {
+      currentMode = e.mode;
+      updateActiveBtn(e.mode);
+    });
+
+    updateActiveBtn('simple_select');
+
+    // ── Lagkatalog ────────────────────────────────────────────────────────────
+    const CATALOG_API  = 'https://datakatalog.miljoeportal.dk/api';
+    const addedWmsLayers = new Map(); // datasetId → {srcId, lyrId}
+    const catalogDatasetWms = new Map(); // datasetId → wmsSource attributes
+
+    let catalogOpen   = false;
+    let catalogLoaded = false;
+    let catalogSearchTimer = null;
+
+    function toggleCatalog() {
+      catalogOpen = !catalogOpen;
+      document.getElementById('catalog-panel').classList.toggle('open', catalogOpen);
+      document.getElementById('btn-catalog').classList.toggle('active', catalogOpen);
+      if (catalogOpen && !catalogLoaded) loadAllCatalogData();
+    }
+
+    async function fetchCatalogPage(page) {
+      const url = `${CATALOG_API}/datasets?include=wmsSource&locale=da-DK&page%5Bsize%5D=50&page%5Bnumber%5D=${page}`;
+      const resp = await fetch(url);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      return resp.json();
+    }
+
+    function processPageData(json) {
+      const wmsById = new Map();
+      (json.included || []).forEach(src => {
+        if (src.type === 'wmsSources') wmsById.set(src.id, src.attributes);
+      });
+      const searchTerm = document.getElementById('catalog-search').value.toLowerCase().trim();
+      json.data.forEach(dataset => {
+        const wmsRel = dataset.relationships?.wmsSource?.data;
+        if (!wmsRel) return;
+        const wms = wmsById.get(wmsRel.id);
+        if (!wms?.url || !wms?.layer) return;
+        catalogDatasetWms.set(dataset.id, wms);
+        renderCatalogItem(dataset.id, dataset.attributes.title, dataset.attributes.description, searchTerm);
+      });
+    }
+
+    async function loadAllCatalogData() {
+      if (catalogLoaded) return;
+      const statusEl = document.getElementById('catalog-status');
+      document.getElementById('catalog-more').style.display = 'none';
+      statusEl.textContent = 'Indlæser katalog…';
+
+      try {
+        // Hent første side for at kende det samlede antal sider
+        const firstJson = await fetchCatalogPage(1);
+        processPageData(firstJson);
+
+        const total      = firstJson.meta?.total ?? 0;
+        const totalPages = Math.ceil(total / 50);
+        let   done       = 1;
+        statusEl.textContent = `Indlæser… ${done}/${totalPages} sider`;
+
+        // Hent alle øvrige sider parallelt
+        if (totalPages > 1) {
+          const remaining = Array.from({ length: totalPages - 1 }, (_, i) =>
+            fetchCatalogPage(i + 2).then(json => {
+              processPageData(json);
+              done++;
+              statusEl.textContent = `Indlæser… ${done}/${totalPages} sider`;
+            })
+          );
+          await Promise.all(remaining);
+        }
+
+        catalogLoaded = true;
+        statusEl.textContent = `${document.getElementById('catalog-list').children.length} datasæt med WMS`;
+      } catch (err) {
+        statusEl.textContent = 'Fejl ved hentning af katalog.';
+        console.error('Catalog fetch error:', err);
+      }
+    }
+
+    function renderCatalogItem(id, title, desc, filterTerm = '') {
+      const safeTitle = escHtml(title || '');
+      const safeDesc  = desc ? escHtml(desc.slice(0, 110)) + (desc.length > 110 ? '…' : '') : '';
+      const isAdded   = addedWmsLayers.has(id);
+
+      const div = document.createElement('div');
+      div.className = 'cat-item';
+      div.id = `cat-${id}`;
+      div.innerHTML = `
+        <div class="cat-title">${safeTitle}</div>
+        ${safeDesc ? `<div class="cat-desc">${safeDesc}</div>` : ''}
+        <div class="cat-footer">
+          <span class="cat-badge">WMS</span>
+          <button class="cat-btn ${isAdded ? 'added' : ''}" onclick="toggleWmsLayer('${id}')">
+            ${isAdded ? '✓ Fjern' : '+ Tilføj'}
+          </button>
+        </div>`;
+
+      // Apply current search filter
+      if (filterTerm) {
+        const text = (title + ' ' + (desc || '')).toLowerCase();
+        div.style.display = text.includes(filterTerm) ? '' : 'none';
+      }
+
+      document.getElementById('catalog-list').appendChild(div);
+    }
+
+    function escHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function catalogSearch(value) {
+      clearTimeout(catalogSearchTimer);
+      catalogSearchTimer = setTimeout(() => {
+        const term = value.toLowerCase().trim();
+        document.querySelectorAll('.cat-item').forEach(el => {
+          const text = el.textContent.toLowerCase();
+          el.style.display = (!term || text.includes(term)) ? '' : 'none';
+        });
+      }, 180);
+    }
+
+    function toggleWmsLayer(datasetId) {
+      addedWmsLayers.has(datasetId) ? removeWmsLayer(datasetId) : addWmsLayer(datasetId);
+    }
+
+    function addWmsLayer(datasetId) {
+      const wms = catalogDatasetWms.get(datasetId);
+      if (!wms) return;
+      const version  = wms.version || '1.3.0';
+      const format   = wms.format  || 'image/png';
+      const crsParam = version.startsWith('1.3') ? 'CRS' : 'SRS';
+      const tileUrl  = `${wms.url}?SERVICE=WMS&VERSION=${version}&REQUEST=GetMap`
+        + `&FORMAT=${encodeURIComponent(format)}&TRANSPARENT=true`
+        + `&LAYERS=${encodeURIComponent(wms.layer)}&${crsParam}=EPSG:3857`
+        + `&STYLES=&WIDTH=256&HEIGHT=256&BBOX={bbox-epsg-3857}`;
+
+      const srcId = `wms-src-${datasetId}`;
+      const lyrId = `wms-lyr-${datasetId}`;
+      // Insert below drawn features so skitser forbliver øverst
+      const beforeLayer = map.getLayer('drawn-poly-fill') ? 'drawn-poly-fill' : undefined;
+      map.addSource(srcId, { type: 'raster', tiles: [tileUrl], tileSize: 256 });
+      map.addLayer({ id: lyrId, type: 'raster', source: srcId,
+        paint: { 'raster-opacity': 0.85 } }, beforeLayer);
+
+      addedWmsLayers.set(datasetId, { srcId, lyrId });
+      updateCatalogBtn(datasetId, true);
+    }
+
+    function removeWmsLayer(datasetId) {
+      const entry = addedWmsLayers.get(datasetId);
+      if (!entry) return;
+      if (map.getLayer(entry.lyrId)) map.removeLayer(entry.lyrId);
+      if (map.getSource(entry.srcId)) map.removeSource(entry.srcId);
+      addedWmsLayers.delete(datasetId);
+      updateCatalogBtn(datasetId, false);
+    }
+
+    function updateCatalogBtn(datasetId, added) {
+      const btn = document.querySelector(`#cat-${datasetId} .cat-btn`);
+      if (!btn) return;
+      btn.textContent = added ? '✓ Fjern' : '+ Tilføj';
+      btn.classList.toggle('added', added);
+    }
+  </script>
 </body>
 </html>

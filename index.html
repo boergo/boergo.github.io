@@ -311,6 +311,63 @@
     }
     #route-clear-btn:hover { background: var(--c-danger-bg); border-color: var(--c-danger); color: var(--c-danger); }
 
+    /* ── Måleinfo ────────────────────────────────────────────────────────────── */
+    #measure-info {
+      position: absolute;
+      bottom: 44px; left: 12px;
+      z-index: 10;
+      background: var(--c-bg);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--c-border);
+      padding: 12px 14px;
+      font-family: var(--font);
+      display: none; min-width: 164px;
+    }
+    #measure-info.visible { display: block; }
+    .measure-label { font-size: 10.5px; font-weight: 600; color: var(--c-text-3);
+      text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 4px; display: block; }
+    .measure-value { font-size: 22px; font-weight: 700; color: var(--c-text); display: block; margin-bottom: 2px; }
+    #measure-hint { font-size: 11.5px; color: var(--c-text-3); margin: 6px 0 10px; line-height: 1.5; }
+    #measure-clear-btn {
+      width: 100%; padding: 6px; font-size: 12px; font-family: var(--font); font-weight: 500;
+      border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+      background: var(--c-bg); cursor: pointer; color: var(--c-text-2);
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
+    }
+    #measure-clear-btn:hover { background: var(--c-danger-bg); border-color: var(--c-danger); color: var(--c-danger); }
+
+    /* ── WMS info-popup ──────────────────────────────────────────────────────── */
+    .maplibregl-popup-content {
+      font-family: var(--font); font-size: 12.5px; color: var(--c-text);
+      border-radius: var(--radius-md); box-shadow: var(--shadow-lg);
+      border: 1px solid var(--c-border); padding: 0;
+      max-width: 320px; max-height: 380px; overflow: hidden;
+    }
+    .wms-popup-header {
+      padding: 10px 13px 8px; border-bottom: 1px solid var(--c-border);
+      font-size: 11.5px; font-weight: 600; color: var(--c-text-2);
+      text-transform: uppercase; letter-spacing: 0.5px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .wms-popup-body { max-height: 320px; overflow-y: auto; padding: 6px 0; }
+    .wms-popup-layer { padding: 4px 13px 8px; }
+    .wms-popup-layer-title { font-size: 11px; font-weight: 700; color: var(--c-primary);
+      text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 5px; }
+    .wms-attr-table { width: 100%; border-collapse: collapse; }
+    .wms-attr-table tr:hover td { background: var(--c-bg-hover); }
+    .wms-attr-table td { padding: 3px 4px; vertical-align: top; line-height: 1.4; }
+    .wms-attr-table td:first-child {
+      color: var(--c-text-2); font-weight: 500; white-space: nowrap;
+      padding-right: 10px; font-size: 11.5px; min-width: 90px;
+    }
+    .wms-attr-table td:last-child { color: var(--c-text); font-size: 12px; word-break: break-word; }
+    .wms-popup-empty { padding: 14px 13px; color: var(--c-text-3); font-size: 12.5px; }
+    .maplibregl-popup-close-button {
+      font-size: 16px; color: var(--c-text-3); padding: 6px 10px; line-height: 1;
+    }
+    .maplibregl-popup-close-button:hover { color: var(--c-text); background: var(--c-bg-hover); }
+
     /* ── Udskriftspanel ──────────────────────────────────────────────────────── */
     #print-panel {
       position: absolute;
@@ -493,6 +550,23 @@
       </svg>
       Udskriv
     </button>
+
+    <div class="divider"></div>
+    <span class="section-label">Mål</span>
+    <button class="tool-btn" id="btn-measure-dist" onclick="startMeasure('distance')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="4" y1="20" x2="20" y2="4"/>
+        <polyline points="8 20 4 20 4 16"/>
+        <polyline points="20 8 20 4 16 4"/>
+      </svg>
+      Afstand
+    </button>
+    <button class="tool-btn" id="btn-measure-area" onclick="startMeasure('area')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+        <polygon points="12,3 21,9 17,20 7,20 3,9"/>
+      </svg>
+      Areal
+    </button>
   </div>
 
   <!-- ── Ruteinfo-panel ───────────────────────────────────────────────────── -->
@@ -501,6 +575,14 @@
     <div class="route-stat">&#x1F6E3; <strong id="route-dist"></strong></div>
     <div class="route-stat">&#x23F1; <strong id="route-time"></strong></div>
     <button id="route-clear-btn" onclick="clearRoute()">Ryd rute</button>
+  </div>
+
+  <!-- ── Måleinfo-panel ───────────────────────────────────────────────────── -->
+  <div id="measure-info">
+    <span class="measure-label" id="measure-label-text">Afstand</span>
+    <strong class="measure-value" id="measure-value">—</strong>
+    <div id="measure-hint">Klik for at tilføje startpunkt</div>
+    <button id="measure-clear-btn" onclick="stopMeasure()">Ryd mål</button>
   </div>
 
   <!-- ── Udskriftspanel ───────────────────────────────────────────────────── -->
@@ -609,6 +691,13 @@
     let currentMode   = 'simple_select';
     let hitFeature    = false; // forhindrer deselect ved klik på feature
 
+    // Mål-state
+    let measureMode     = null;  // 'distance' | 'area' | null
+    let measurePoints   = [];
+    let measureFinished = false;
+    let measureClickTimer = null;
+    let wmsPopup        = null;
+
     // ── Hjælpefunktioner til sources ──────────────────────────────────────────
     function featureCollection(features) {
       return { type: 'FeatureCollection', features };
@@ -699,6 +788,25 @@
         paint: { 'circle-radius': 6, 'circle-color': ['get', 'fill_color'] }
       });
 
+      // -- Målelag --
+      map.addSource('measure-pts',     { type: 'geojson', data: featureCollection([]) });
+      map.addSource('measure-line',    { type: 'geojson', data: featureCollection([]) });
+      map.addSource('measure-polygon', { type: 'geojson', data: featureCollection([]) });
+      map.addSource('measure-rubber',  { type: 'geojson', data: featureCollection([]) });
+
+      map.addLayer({ id: 'measure-poly-fill', type: 'fill', source: 'measure-polygon',
+        paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.08 } });
+      map.addLayer({ id: 'measure-poly-stroke', type: 'line', source: 'measure-polygon',
+        paint: { 'line-color': '#2563eb', 'line-width': 2, 'line-dasharray': [5, 3] } });
+      map.addLayer({ id: 'measure-line-layer', type: 'line', source: 'measure-line',
+        layout: { 'line-cap': 'round' },
+        paint: { 'line-color': '#2563eb', 'line-width': 2.5, 'line-dasharray': [5, 3] } });
+      map.addLayer({ id: 'measure-rubber-layer', type: 'line', source: 'measure-rubber',
+        paint: { 'line-color': '#2563eb', 'line-width': 1.5, 'line-dasharray': [3, 3], 'line-opacity': 0.55 } });
+      map.addLayer({ id: 'measure-pts-layer', type: 'circle', source: 'measure-pts',
+        paint: { 'circle-radius': 5, 'circle-color': '#fff',
+          'circle-stroke-width': 2.5, 'circle-stroke-color': '#2563eb' } });
+
       // -- Klik til selektion --
       const clickLayers = [
         'drawn-poly-fill', 'drawn-poly-stroke',
@@ -711,20 +819,33 @@
       clickLayers.forEach(lid => {
         map.on('click', lid, e => {
           if (currentMode !== 'simple_select') return;
+          if (measureMode) return;
           hitFeature = true;
           const fid = e.features[0].properties._fid;
           if (fid) selectFeature(fid);
         });
         map.on('mouseenter', lid, () => {
-          if (currentMode === 'simple_select' && !routeMode) map.getCanvas().style.cursor = 'pointer';
+          if (currentMode === 'simple_select' && !routeMode && !measureMode) map.getCanvas().style.cursor = 'pointer';
         });
         map.on('mouseleave', lid, () => {
           if (!routeMode) map.getCanvas().style.cursor = '';
         });
       });
 
-      // Klik på tomt kort → deselect / rutepunkt
+      // Klik på tomt kort → mål / deselect / rutepunkt
       map.on('click', e => {
+        if (measureMode && !measureFinished) {
+          clearTimeout(measureClickTimer);
+          const pt = [e.lngLat.lng, e.lngLat.lat];
+          measureClickTimer = setTimeout(() => {
+            measurePoints.push(pt);
+            updateMeasureDisplay();
+          }, 250);
+          return;
+        }
+        if (addedWmsLayers.size > 0 && !measureMode && !routeMode && currentMode === 'simple_select') {
+          queryWmsAtPoint(e.lngLat, e.point);
+        }
         if (routeMode) {
           const lngLat = [e.lngLat.lng, e.lngLat.lat];
           if (!routeStart) {
@@ -748,6 +869,20 @@
         if (hitFeature) { hitFeature = false; return; }
         if (currentMode === 'simple_select') deselect();
       });
+    });
+
+    // ── Mål: dblclick + mousemove ─────────────────────────────────────────────
+    map.on('dblclick', e => {
+      if (measureMode && !measureFinished) {
+        clearTimeout(measureClickTimer);
+        finishMeasure();
+      }
+    });
+
+    map.on('mousemove', e => {
+      if (measureMode && !measureFinished && measurePoints.length > 0) {
+        updateMeasureDisplay([e.lngLat.lng, e.lngLat.lat]);
+      }
     });
 
     // ── Selektion ─────────────────────────────────────────────────────────────
@@ -978,7 +1113,9 @@
     }
 
     function updateCatalogBtn(datasetId, added) {
-      const btn = document.querySelector(`#cat-${datasetId} .cat-btn`);
+      const item = document.getElementById(`cat-${datasetId}`);
+      if (!item) return;
+      const btn = item.querySelector('.cat-btn');
       if (!btn) return;
       btn.textContent = added ? '✓ Fjern' : '+ Tilføj';
       btn.classList.toggle('added', added);
@@ -1118,6 +1255,176 @@
       document.getElementById('route-dist').textContent = '';
       document.getElementById('route-time').textContent = '';
       document.getElementById('route-info').classList.remove('visible');
+    }
+
+    // ── Måleværktøjer ─────────────────────────────────────────────────────────
+    function startMeasure(mode) {
+      if (measureMode === mode) { stopMeasure(); return; } // toggle off
+      stopMeasure();
+      measureMode     = mode;
+      measureFinished = false;
+      measurePoints   = [];
+
+      // Deaktiver rute og tegning
+      if (routeMode) toggleRouteMode();
+      draw.changeMode('simple_select');
+      currentMode = 'simple_select';
+      updateActiveBtn('simple_select');
+      deselect();
+
+      map.doubleClickZoom.disable();
+      map.getCanvas().style.cursor = 'crosshair';
+      document.getElementById('btn-measure-dist').classList.toggle('active', mode === 'distance');
+      document.getElementById('btn-measure-area').classList.toggle('active', mode === 'area');
+      document.getElementById('measure-label-text').textContent = mode === 'distance' ? 'Afstand' : 'Areal';
+      document.getElementById('measure-value').textContent = '—';
+      document.getElementById('measure-hint').textContent = 'Klik for at tilføje startpunkt';
+      document.getElementById('route-info').classList.remove('visible');
+      document.getElementById('measure-info').classList.add('visible');
+    }
+
+    function stopMeasure() {
+      measureMode     = null;
+      measurePoints   = [];
+      measureFinished = false;
+      clearTimeout(measureClickTimer);
+      map.doubleClickZoom.enable();
+      map.getCanvas().style.cursor = '';
+      document.getElementById('btn-measure-dist').classList.remove('active');
+      document.getElementById('btn-measure-area').classList.remove('active');
+      document.getElementById('measure-info').classList.remove('visible');
+      clearMeasureSources();
+    }
+
+    function clearMeasureSources() {
+      if (!map.getSource('measure-pts')) return;
+      const empty = featureCollection([]);
+      map.getSource('measure-pts').setData(empty);
+      map.getSource('measure-line').setData(empty);
+      map.getSource('measure-polygon').setData(empty);
+      map.getSource('measure-rubber').setData(empty);
+    }
+
+    function finishMeasure() {
+      if (!measureMode) return;
+      if (measureMode === 'distance' && measurePoints.length < 2) { stopMeasure(); return; }
+      if (measureMode === 'area'     && measurePoints.length < 3) { stopMeasure(); return; }
+      measureFinished = true;
+      map.getCanvas().style.cursor = '';
+      map.getSource('measure-rubber').setData(featureCollection([]));
+      document.getElementById('measure-hint').textContent = 'Klik "Ryd mål" for at starte forfra';
+      updateMeasureDisplay();
+    }
+
+    function haversine(lng1, lat1, lng2, lat2) {
+      const R = 6371000;
+      const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
+      const dp = (lat2 - lat1) * Math.PI / 180;
+      const dl = (lng2 - lng1) * Math.PI / 180;
+      const a = Math.sin(dp/2) * Math.sin(dp/2) + Math.cos(p1) * Math.cos(p2) * Math.sin(dl/2) * Math.sin(dl/2);
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+
+    function totalDistance(pts) {
+      let d = 0;
+      for (let i = 1; i < pts.length; i++) d += haversine(...pts[i-1], ...pts[i]);
+      return d;
+    }
+
+    function sphericalArea(pts) {
+      if (pts.length < 3) return 0;
+      const R = 6371000;
+      let area = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const j = (i + 1) % pts.length;
+        const lat1 = pts[i][1] * Math.PI / 180;
+        const lat2 = pts[j][1] * Math.PI / 180;
+        const dLng = (pts[j][0] - pts[i][0]) * Math.PI / 180;
+        area += dLng * (2 + Math.sin(lat1) + Math.sin(lat2));
+      }
+      return Math.abs(area * R * R / 2);
+    }
+
+    function formatDistance(m) {
+      return m >= 1000 ? (m / 1000).toFixed(2) + ' km' : Math.round(m) + ' m';
+    }
+
+    function formatArea(m2) {
+      if (m2 >= 1e6)   return (m2 / 1e6).toFixed(2) + ' km²';
+      if (m2 >= 10000) return (m2 / 10000).toFixed(2) + ' ha';
+      return Math.round(m2) + ' m²';
+    }
+
+    function updateMeasureDisplay(mouseCoords) {
+      if (!measureMode) return;
+
+      // Byg punktliste inkl. mus-position (rubber band)
+      const pts = measureFinished ? measurePoints.slice() : [...measurePoints, ...(mouseCoords && measurePoints.length > 0 ? [mouseCoords] : [])];
+
+      // Opdater punktmarkers (kun faste punkter)
+      map.getSource('measure-pts').setData(featureCollection(
+        measurePoints.map(p => ({ type: 'Feature', geometry: { type: 'Point', coordinates: p }, properties: {} }))
+      ));
+
+      if (measureMode === 'distance') {
+        map.getSource('measure-polygon').setData(featureCollection([]));
+        map.getSource('measure-line').setData(
+          pts.length >= 2
+            ? { type: 'Feature', geometry: { type: 'LineString', coordinates: pts }, properties: {} }
+            : featureCollection([])
+        );
+      } else { // area
+        map.getSource('measure-line').setData(featureCollection([]));
+        if (pts.length >= 3) {
+          map.getSource('measure-polygon').setData({
+            type: 'Feature',
+            geometry: { type: 'Polygon', coordinates: [[...pts, pts[0]]] },
+            properties: {}
+          });
+        } else {
+          map.getSource('measure-polygon').setData(featureCollection([]));
+          if (pts.length === 2) {
+            map.getSource('measure-line').setData({
+              type: 'Feature', geometry: { type: 'LineString', coordinates: pts }, properties: {}
+            });
+          }
+        }
+      }
+
+      // Rubber band
+      if (mouseCoords && measurePoints.length > 0 && !measureFinished) {
+        map.getSource('measure-rubber').setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [measurePoints[measurePoints.length - 1], mouseCoords] },
+          properties: {}
+        });
+      }
+
+      // Opdater value-display
+      const valueEl = document.getElementById('measure-value');
+      const hintEl  = document.getElementById('measure-hint');
+
+      if (measureMode === 'distance') {
+        const d = pts.length >= 2 ? totalDistance(pts) : null;
+        valueEl.textContent = d !== null ? formatDistance(d) : '—';
+        if (!measureFinished) {
+          hintEl.textContent = measurePoints.length >= 2
+            ? 'Dobbeltklik for at afslutte · ESC for at annullere'
+            : measurePoints.length === 1
+              ? 'Klik for at tilføje næste punkt'
+              : 'Klik for at tilføje startpunkt';
+        }
+      } else {
+        const a = measurePoints.length >= 3 ? sphericalArea(measurePoints) : null;
+        valueEl.textContent = a !== null ? formatArea(a) : '—';
+        if (!measureFinished) {
+          hintEl.textContent = measurePoints.length >= 3
+            ? `${measurePoints.length} punkter · Dobbeltklik for at afslutte`
+            : measurePoints.length === 0
+              ? 'Klik for at tilføje startpunkt'
+              : `${measurePoints.length} punkt${measurePoints.length > 1 ? 'er' : ''} · Tilføj flere`;
+        }
+      }
     }
 
     // ── PDF Udskrift ──────────────────────────────────────────────────────────
@@ -1472,6 +1779,86 @@
     document.addEventListener('click', e => {
       if (!document.getElementById('search-box').contains(e.target)) closeSearch();
     });
+
+    // ESC: annuller aktiv måling
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && measureMode) stopMeasure();
+    });
+
+    // ── WMS GetFeatureInfo ─────────────────────────────────────────────────────
+    function lngToMercX(lng) { return lng * Math.PI / 180 * 6378137; }
+    function latToMercY(lat) { return Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360)) * 6378137; }
+
+    async function queryWmsAtPoint(lngLat, point) {
+      if (!addedWmsLayers.size) return;
+
+      if (wmsPopup) { wmsPopup.remove(); wmsPopup = null; }
+
+      const canvas  = map.getCanvas();
+      const W = canvas.clientWidth, H = canvas.clientHeight;
+      const bounds  = map.getBounds();
+      const bbox = [
+        lngToMercX(bounds.getWest()),  latToMercY(bounds.getSouth()),
+        lngToMercX(bounds.getEast()),  latToMercY(bounds.getNorth())
+      ].join(',');
+      const I = Math.round(point.x), J = Math.round(point.y);
+
+      const results = [];
+
+      await Promise.all(Array.from(addedWmsLayers.entries()).map(async ([datasetId, { lyrId }]) => {
+        const wms = catalogDatasetWms.get(datasetId);
+        if (!wms) return;
+        const version   = wms.version || '1.3.0';
+        const crsParam  = version.startsWith('1.3') ? 'CRS' : 'SRS';
+        const url = `${wms.url}?SERVICE=WMS&VERSION=${version}&REQUEST=GetFeatureInfo`
+          + `&LAYERS=${encodeURIComponent(wms.layer)}&QUERY_LAYERS=${encodeURIComponent(wms.layer)}`
+          + `&INFO_FORMAT=${encodeURIComponent('application/json')}`
+          + `&FEATURE_COUNT=5&I=${I}&J=${J}&WIDTH=${W}&HEIGHT=${H}`
+          + `&BBOX=${bbox}&${crsParam}=EPSG:3857&STYLES=`;
+        try {
+          const resp = await fetch(url);
+          if (!resp.ok) return;
+          const ct   = resp.headers.get('content-type') || '';
+          let features = [];
+          if (ct.includes('json')) {
+            const json = await resp.json();
+            features = json.features || [];
+          }
+          if (features.length > 0) {
+            const layerTitle = document.querySelector(`#cat-${datasetId} .cat-title`)?.textContent || wms.layer;
+            results.push({ title: layerTitle, features });
+          }
+        } catch { /* ignore CORS / network errors */ }
+      }));
+
+      if (!results.length) return;
+
+      const SKIP = /^(geom|geometry|wkt|shape|the_geom|gml_id|boundedby)$/i;
+      let body = '';
+      results.forEach(({ title, features }) => {
+        body += `<div class="wms-popup-layer"><div class="wms-popup-layer-title">${escHtml(title)}</div>`;
+        features.forEach(f => {
+          const props = f.properties || {};
+          const rows = Object.entries(props)
+            .filter(([k, v]) => !SKIP.test(k) && v !== null && v !== '')
+            .map(([k, v]) => `<tr><td>${escHtml(String(k))}</td><td>${escHtml(String(v))}</td></tr>`)
+            .join('');
+          if (rows) body += `<table class="wms-attr-table">${rows}</table>`;
+        });
+        body += '</div>';
+      });
+
+      const html = `<div class="wms-popup-header">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Attributter
+      </div><div class="wms-popup-body">${body}</div>`;
+
+      wmsPopup = new maplibregl.Popup({ maxWidth: '320px', closeOnClick: true })
+        .setLngLat(lngLat)
+        .setHTML(html)
+        .addTo(map);
+      wmsPopup.on('close', () => { wmsPopup = null; });
+    }
   </script>
 </body>
 </html>

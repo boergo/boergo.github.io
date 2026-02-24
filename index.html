@@ -9,62 +9,170 @@
   <script>window.mapboxgl = maplibregl;</script>
   <script src="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.js"></script>
   <link rel="stylesheet" href="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.css" />
+  <script src="https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --c-primary:    #2563eb;
+      --c-primary-h:  #1d4ed8;
+      --c-primary-bg: #eff6ff;
+      --c-primary-bd: #bfdbfe;
+      --c-danger:     #ef4444;
+      --c-danger-bg:  #fef2f2;
+      --c-success:    #16a34a;
+      --c-success-bg: #f0fdf4;
+      --c-success-bd: #bbf7d0;
+      --c-text:       #111827;
+      --c-text-2:     #6b7280;
+      --c-text-3:     #9ca3af;
+      --c-border:     #e5e7eb;
+      --c-border-h:   #d1d5db;
+      --c-bg:         #ffffff;
+      --c-bg-subtle:  #f9fafb;
+      --c-bg-hover:   #f3f4f6;
+      --shadow-sm:    0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
+      --shadow-md:    0 4px 16px rgba(0,0,0,0.10), 0 1px 4px rgba(0,0,0,0.06);
+      --shadow-lg:    0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+      --radius-sm:    6px;
+      --radius-md:    10px;
+      --radius-lg:    14px;
+      --font:         'Inter', system-ui, -apple-system, sans-serif;
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body, #map { width: 100%; height: 100%; }
 
+    /* ── Søgefelt ────────────────────────────────────────────────────────────── */
+    #search-box {
+      position: absolute;
+      top: 12px;
+      left: 178px;
+      width: 340px;
+      z-index: 10;
+      font-family: var(--font);
+    }
+    #search-input-wrap {
+      display: flex;
+      align-items: center;
+      background: var(--c-bg);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      padding: 0 10px;
+      gap: 8px;
+      height: 42px;
+      border: 1px solid transparent;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    #search-input-wrap:focus-within {
+      border-color: var(--c-primary-bd);
+      box-shadow: var(--shadow-md), 0 0 0 3px rgba(37,99,235,0.1);
+    }
+    #search-input-wrap svg { flex-shrink: 0; color: var(--c-text-3); }
+    #search-input {
+      flex: 1; border: none; outline: none;
+      font-size: 13.5px; font-family: var(--font);
+      color: var(--c-text); background: transparent;
+    }
+    #search-input::placeholder { color: var(--c-text-3); }
+    #search-clear {
+      background: none; border: none; cursor: pointer;
+      color: var(--c-text-3); font-size: 15px; line-height: 1;
+      padding: 3px; border-radius: 50%; display: none;
+      transition: background 0.1s, color 0.1s;
+    }
+    #search-clear:hover { color: var(--c-text-2); background: var(--c-bg-hover); }
+    #search-results {
+      margin-top: 6px;
+      background: var(--c-bg);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--c-border);
+      overflow: hidden;
+      display: none;
+    }
+    .search-group-label {
+      font-size: 10.5px; font-weight: 600; color: var(--c-text-3);
+      text-transform: uppercase; letter-spacing: 0.7px;
+      padding: 9px 14px 4px;
+      font-family: var(--font);
+    }
+    .search-result-item {
+      padding: 7px 14px;
+      font-size: 13px; font-family: var(--font);
+      color: var(--c-text);
+      cursor: pointer;
+      display: flex; align-items: center; gap: 9px;
+      line-height: 1.35;
+      transition: background 0.1s;
+    }
+    .search-result-item:hover,
+    .search-result-item.active { background: var(--c-primary-bg); }
+    .search-result-item > svg { flex-shrink: 0; color: var(--c-primary); }
+    .search-result-item > span { flex: 1; min-width: 0; }
+    .search-result-sub {
+      display: block; font-size: 11.5px; color: var(--c-text-3);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+    .search-no-results {
+      padding: 14px; font-size: 13px;
+      color: var(--c-text-3); text-align: center;
+      font-family: var(--font);
+    }
+
+    /* ── Toolbar ─────────────────────────────────────────────────────────────── */
     #toolbar {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 12px; left: 12px;
       z-index: 10;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
-      padding: 10px;
-      width: 152px;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
-      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--c-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--c-border);
+      padding: 8px;
+      width: 156px;
+      display: flex; flex-direction: column; gap: 2px;
+      font-family: var(--font);
     }
     .section-label {
-      font-size: 10px;
-      font-weight: 700;
-      color: #9e9e9e;
-      text-transform: uppercase;
-      letter-spacing: 0.7px;
-      padding: 2px 2px 0;
+      font-size: 10px; font-weight: 600;
+      color: var(--c-text-3);
+      text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 6px 6px 2px;
     }
     .tool-btn {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 6px 9px;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fff;
+      display: flex; align-items: center; gap: 7px;
+      padding: 7px 8px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
       cursor: pointer;
-      font-size: 13px;
-      color: #333;
-      width: 100%;
-      text-align: left;
-      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      font-size: 13px; font-family: var(--font); font-weight: 500;
+      color: var(--c-text-2);
+      width: 100%; text-align: left;
+      transition: background 0.12s, color 0.12s;
       user-select: none;
     }
-    .tool-btn:hover        { background: #f5f5f5; border-color: #bbb; }
-    .tool-btn.active       { background: #e8f0fe; border-color: #4285f4; color: #1558c0; }
-    .tool-btn.delete:hover { background: #fdecea; border-color: #e53935; color: #c62828; }
-    .divider { height: 1px; background: #ebebeb; margin: 2px 0; }
-    .color-row {
-      display: flex;
-      align-items: center;
-      padding: 1px 2px;
+    .tool-btn svg { opacity: 0.7; flex-shrink: 0; transition: opacity 0.12s; }
+    .tool-btn:hover { background: var(--c-bg-hover); color: var(--c-text); }
+    .tool-btn:hover svg { opacity: 1; }
+    .tool-btn.active {
+      background: var(--c-primary-bg);
+      color: var(--c-primary);
     }
-    .color-row label { flex: 1; font-size: 12px; color: #444; cursor: pointer; }
+    .tool-btn.active svg { opacity: 1; color: var(--c-primary); }
+    .tool-btn.delete:hover { background: var(--c-danger-bg); color: var(--c-danger); }
+    .tool-btn.delete:hover svg { opacity: 1; color: var(--c-danger); }
+    .divider { height: 1px; background: var(--c-border); margin: 4px 0; }
+    .color-row {
+      display: flex; align-items: center;
+      padding: 3px 8px; gap: 8px;
+    }
+    .color-row label { flex: 1; font-size: 12.5px; font-weight: 500; color: var(--c-text-2); cursor: pointer; }
     .color-row input[type="color"] {
-      width: 32px; height: 22px;
-      border: 1.5px solid #ddd; border-radius: 4px;
+      width: 28px; height: 20px;
+      border: 1.5px solid var(--c-border); border-radius: 5px;
       padding: 1px; cursor: pointer; background: none;
     }
 
@@ -73,142 +181,243 @@
       position: absolute;
       top: 0; right: 0;
       width: 340px; height: 100%;
-      background: #fff;
+      background: var(--c-bg);
       z-index: 11;
-      display: flex;
-      flex-direction: column;
-      box-shadow: -4px 0 20px rgba(0,0,0,0.14);
+      display: flex; flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      border-left: 1px solid var(--c-border);
       transform: translateX(100%);
-      transition: transform 0.22s ease;
-      font-family: system-ui, -apple-system, sans-serif;
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+      font-family: var(--font);
     }
     #catalog-panel.open { transform: translateX(0); }
 
     #catalog-header {
-      display: flex;
-      align-items: center;
-      padding: 13px 14px 11px;
-      border-bottom: 1px solid #eee;
-      gap: 8px;
-      flex-shrink: 0;
+      display: flex; align-items: center;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--c-border);
+      gap: 10px; flex-shrink: 0;
     }
-    #catalog-header h2 { flex: 1; font-size: 14px; font-weight: 700; color: #222; margin: 0; }
+    #catalog-header h2 { flex: 1; font-size: 14px; font-weight: 600; color: var(--c-text); margin: 0; }
     #catalog-close {
       background: none; border: none; cursor: pointer;
-      color: #aaa; font-size: 18px; line-height: 1; padding: 2px 4px; border-radius: 4px;
+      color: var(--c-text-3); font-size: 17px; line-height: 1;
+      padding: 4px; border-radius: 6px;
+      transition: background 0.1s, color 0.1s;
     }
-    #catalog-close:hover { color: #333; background: #f0f0f0; }
+    #catalog-close:hover { color: var(--c-text); background: var(--c-bg-hover); }
 
     #catalog-search-wrap {
       padding: 10px 12px;
-      border-bottom: 1px solid #eee;
+      border-bottom: 1px solid var(--c-border);
       flex-shrink: 0;
     }
     #catalog-search-wrap input {
-      width: 100%; padding: 7px 10px;
-      border: 1.5px solid #ddd; border-radius: 6px;
-      font-size: 13px; outline: none;
+      width: 100%; padding: 8px 11px;
+      border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+      font-size: 13px; font-family: var(--font); outline: none;
+      color: var(--c-text);
+      transition: border-color 0.15s;
     }
-    #catalog-search-wrap input:focus { border-color: #4285f4; }
+    #catalog-search-wrap input:focus { border-color: var(--c-primary); }
 
     #catalog-list {
       flex: 1; overflow-y: auto;
-      padding: 8px 10px;
+      padding: 10px 10px;
       display: flex; flex-direction: column; gap: 6px;
     }
     .cat-item {
-      border: 1px solid #e8e8e8;
-      border-radius: 7px;
-      padding: 9px 10px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-sm);
+      padding: 10px 12px;
+      transition: border-color 0.12s;
     }
-    .cat-title { font-size: 13px; font-weight: 600; color: #1a1a1a; line-height: 1.35; margin-bottom: 3px; }
-    .cat-desc  { font-size: 11.5px; color: #777; line-height: 1.4; margin-bottom: 7px; }
+    .cat-item:hover { border-color: var(--c-border-h); }
+    .cat-title { font-size: 13px; font-weight: 600; color: var(--c-text); line-height: 1.4; margin-bottom: 3px; }
+    .cat-desc  { font-size: 11.5px; color: var(--c-text-2); line-height: 1.45; margin-bottom: 8px; }
     .cat-footer { display: flex; align-items: center; gap: 6px; }
     .cat-badge {
-      font-size: 10px; font-weight: 700; color: #5a6472;
-      background: #edf0f3; padding: 2px 6px; border-radius: 4px; letter-spacing: 0.3px;
+      font-size: 10px; font-weight: 600; color: var(--c-text-2);
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      padding: 2px 7px; border-radius: 20px; letter-spacing: 0.2px;
     }
     .cat-btn {
       margin-left: auto;
-      padding: 4px 11px; font-size: 12px; font-weight: 600;
-      border-radius: 5px; border: 1.5px solid #4285f4;
-      background: #fff; color: #4285f4;
+      padding: 4px 12px; font-size: 12px; font-weight: 600; font-family: var(--font);
+      border-radius: 20px; border: 1.5px solid var(--c-primary);
+      background: transparent; color: var(--c-primary);
       cursor: pointer;
-      transition: background 0.1s, color 0.1s;
+      transition: background 0.12s, color 0.12s;
       white-space: nowrap;
     }
-    .cat-btn:hover { background: #4285f4; color: #fff; }
-    .cat-btn.added { border-color: #34a853; color: #34a853; }
-    .cat-btn.added:hover { background: #34a853; color: #fff; }
+    .cat-btn:hover { background: var(--c-primary); color: #fff; }
+    .cat-btn.added { border-color: var(--c-success); color: var(--c-success); }
+    .cat-btn.added:hover { background: var(--c-success); color: #fff; }
 
     #catalog-status {
-      text-align: center; color: #aaa;
+      text-align: center; color: var(--c-text-3);
       font-size: 12px; padding: 10px 12px;
-      flex-shrink: 0;
+      flex-shrink: 0; font-family: var(--font);
     }
     #catalog-more {
-      margin: 2px 10px 12px;
-      padding: 7px; font-size: 12px;
-      border: 1.5px solid #ddd; border-radius: 6px;
-      background: #fff; color: #555; cursor: pointer;
+      margin: 0 10px 12px;
+      padding: 8px; font-size: 12px; font-family: var(--font);
+      border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+      background: var(--c-bg); color: var(--c-text-2); cursor: pointer;
       display: none; flex-shrink: 0;
+      transition: background 0.1s;
     }
-    #catalog-more:hover { background: #f5f5f5; }
+    #catalog-more:hover { background: var(--c-bg-hover); }
 
-    /* ── Ruteprofil-knapper ───────────────────────────────────────────────────── */
-    .profile-row {
-      display: flex;
-      gap: 3px;
-    }
+    /* ── Profil-knapper (rute + print) ───────────────────────────────────────── */
+    .profile-row { display: flex; gap: 4px; }
     .profile-btn {
       flex: 1;
-      padding: 5px 2px;
-      font-size: 11px;
-      font-weight: 600;
-      border: 1.5px solid #e0e0e0;
-      border-radius: 5px;
-      background: #fff;
-      color: #555;
+      padding: 5px 4px;
+      font-size: 11.5px; font-weight: 600; font-family: var(--font);
+      border: 1.5px solid var(--c-border);
+      border-radius: var(--radius-sm);
+      background: var(--c-bg);
+      color: var(--c-text-2);
       cursor: pointer;
-      transition: background 0.1s, border-color 0.1s, color 0.1s;
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
     }
-    .profile-btn:hover  { background: #f5f5f5; border-color: #bbb; }
-    .profile-btn.active { background: #e8f0fe; border-color: #4285f4; color: #1558c0; }
+    .profile-btn:hover  { background: var(--c-bg-hover); border-color: var(--c-border-h); color: var(--c-text); }
+    .profile-btn.active { background: var(--c-primary-bg); border-color: var(--c-primary); color: var(--c-primary); }
 
-    /* ── Ruteinfo-panel ──────────────────────────────────────────────────────── */
+    /* ── Ruteinfo ────────────────────────────────────────────────────────────── */
     #route-info {
       position: absolute;
-      bottom: 42px;
-      left: 10px;
+      bottom: 44px; left: 12px;
       z-index: 10;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
-      padding: 10px 14px;
-      font-family: system-ui, -apple-system, sans-serif;
-      display: none;
-      min-width: 160px;
+      background: var(--c-bg);
+      border-radius: var(--radius-md);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--c-border);
+      padding: 12px 14px;
+      font-family: var(--font);
+      display: none; min-width: 164px;
     }
     #route-info.visible { display: block; }
-    .route-stat { font-size: 13px; color: #555; margin-bottom: 2px; }
-    .route-stat strong { color: #1558c0; font-size: 15px; }
-    #route-hint { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+    .route-stat { font-size: 13px; color: var(--c-text-2); margin-bottom: 3px; display: flex; align-items: baseline; gap: 5px; }
+    .route-stat strong { color: var(--c-text); font-size: 16px; font-weight: 600; }
+    #route-hint { font-size: 11.5px; color: var(--c-text-3); margin-bottom: 8px; }
     #route-clear-btn {
-      margin-top: 8px;
-      width: 100%;
-      padding: 5px;
-      font-size: 12px;
-      border: 1.5px solid #ddd;
-      border-radius: 5px;
-      background: #fff;
-      cursor: pointer;
-      color: #555;
+      margin-top: 10px; width: 100%;
+      padding: 6px; font-size: 12px; font-family: var(--font); font-weight: 500;
+      border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+      background: var(--c-bg); cursor: pointer; color: var(--c-text-2);
+      transition: background 0.12s, border-color 0.12s, color 0.12s;
     }
-    #route-clear-btn:hover { background: #fdecea; border-color: #e53935; color: #c62828; }
+    #route-clear-btn:hover { background: var(--c-danger-bg); border-color: var(--c-danger); color: var(--c-danger); }
+
+    /* ── Udskriftspanel ──────────────────────────────────────────────────────── */
+    #print-panel {
+      position: absolute;
+      top: 0; right: 0;
+      width: 300px; height: 100%;
+      background: var(--c-bg);
+      z-index: 11;
+      display: flex; flex-direction: column;
+      box-shadow: var(--shadow-lg);
+      border-left: 1px solid var(--c-border);
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(0.4,0,0.2,1);
+      font-family: var(--font);
+    }
+    #print-panel.open { transform: translateX(0); }
+
+    #print-header {
+      display: flex; align-items: center;
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--c-border);
+      gap: 10px; flex-shrink: 0;
+    }
+    #print-header h2 { flex: 1; font-size: 14px; font-weight: 600; color: var(--c-text); margin: 0; }
+    #print-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--c-text-3); font-size: 17px; line-height: 1;
+      padding: 4px; border-radius: 6px;
+      transition: background 0.1s, color 0.1s;
+    }
+    #print-close:hover { color: var(--c-text); background: var(--c-bg-hover); }
+
+    #print-body {
+      flex: 1; overflow-y: auto;
+      padding: 16px 14px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .print-field { display: flex; flex-direction: column; gap: 5px; }
+    .print-label {
+      font-size: 10.5px; font-weight: 600; color: var(--c-text-3);
+      text-transform: uppercase; letter-spacing: 0.7px;
+    }
+    .print-select, .print-input {
+      width: 100%; padding: 8px 11px;
+      border: 1.5px solid var(--c-border); border-radius: var(--radius-sm);
+      font-size: 13px; font-family: var(--font); outline: none; color: var(--c-text);
+      background: var(--c-bg);
+      transition: border-color 0.15s;
+    }
+    .print-select:focus, .print-input:focus { border-color: var(--c-primary); }
+    #print-hint {
+      font-size: 12px; color: var(--c-text-2); line-height: 1.55;
+      background: var(--c-bg-subtle); border: 1px solid var(--c-border);
+      border-radius: var(--radius-sm); padding: 9px 11px;
+    }
+    #print-dl-btn {
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      padding: 10px 14px; font-size: 13.5px; font-weight: 600; font-family: var(--font);
+      border-radius: var(--radius-sm); border: none;
+      background: var(--c-primary); color: #fff;
+      cursor: pointer; width: 100%;
+      transition: background 0.15s;
+      letter-spacing: 0.1px;
+    }
+    #print-dl-btn:hover { background: var(--c-primary-h); }
+    #print-dl-btn:disabled { background: var(--c-text-3); cursor: default; }
+
+    /* ── Printramme ───────────────────────────────────────────────────────────── */
+    #print-frame {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      border: 2px solid var(--c-primary);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.25);
+      pointer-events: none;
+      z-index: 9;
+      display: none;
+    }
+    #print-frame-label {
+      position: absolute;
+      bottom: -27px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--c-primary); color: #fff;
+      font-size: 11px; font-weight: 600; font-family: var(--font);
+      padding: 3px 10px;
+      border-radius: 0 0 6px 6px;
+      white-space: nowrap;
+      letter-spacing: 0.1px;
+    }
   </style>
 </head>
 <body>
   <div id="map"></div>
+
+  <!-- ── Søgefelt ──────────────────────────────────────────────────────────── -->
+  <div id="search-box">
+    <div id="search-input-wrap">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="search-input" placeholder="Søg adresse, stednavn eller virksomhed…"
+        autocomplete="off" spellcheck="false"
+        oninput="onSearchInput(this.value)"
+        onkeydown="onSearchKeydown(event)" />
+      <button id="search-clear" onclick="clearSearch()" title="Ryd">✕</button>
+    </div>
+    <div id="search-results"></div>
+  </div>
 
   <div id="toolbar">
     <span class="section-label">Tegneværktøjer</span>
@@ -273,6 +482,17 @@
       <button class="profile-btn"        id="prof-foot"    onclick="setRouteProfile('foot')">Fod</button>
       <button class="profile-btn"        id="prof-bicycle" onclick="setRouteProfile('bicycle')">Cykel</button>
     </div>
+
+    <div class="divider"></div>
+    <span class="section-label">Udskrift</span>
+    <button class="tool-btn" id="btn-print" onclick="togglePrintPanel()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      Udskriv
+    </button>
   </div>
 
   <!-- ── Ruteinfo-panel ───────────────────────────────────────────────────── -->
@@ -281,6 +501,68 @@
     <div class="route-stat">&#x1F6E3; <strong id="route-dist"></strong></div>
     <div class="route-stat">&#x23F1; <strong id="route-time"></strong></div>
     <button id="route-clear-btn" onclick="clearRoute()">Ryd rute</button>
+  </div>
+
+  <!-- ── Udskriftspanel ───────────────────────────────────────────────────── -->
+  <div id="print-panel">
+    <div id="print-header">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#666" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      <h2>PDF Udskrift</h2>
+      <button id="print-close" onclick="togglePrintPanel()" title="Luk">✕</button>
+    </div>
+    <div id="print-body">
+      <div class="print-field">
+        <span class="print-label">Papirformat</span>
+        <div class="profile-row" id="paper-btns">
+          <button class="profile-btn active" onclick="setPrintPaper('a4')">A4</button>
+          <button class="profile-btn"        onclick="setPrintPaper('a3')">A3</button>
+        </div>
+      </div>
+      <div class="print-field">
+        <span class="print-label">Orientering</span>
+        <div class="profile-row" id="ori-btns">
+          <button class="profile-btn active" onclick="setPrintOrientation('portrait')">Stående</button>
+          <button class="profile-btn"        onclick="setPrintOrientation('landscape')">Liggende</button>
+        </div>
+      </div>
+      <div class="print-field">
+        <span class="print-label">Målestok</span>
+        <select id="print-scale" class="print-select" onchange="applyPrintScale()">
+          <option value="500">1:500</option>
+          <option value="1000">1:1.000</option>
+          <option value="2000">1:2.000</option>
+          <option value="5000" selected>1:5.000</option>
+          <option value="10000">1:10.000</option>
+          <option value="25000">1:25.000</option>
+          <option value="50000">1:50.000</option>
+          <option value="100000">1:100.000</option>
+        </select>
+      </div>
+      <div class="print-field">
+        <span class="print-label">Titel (valgfri)</span>
+        <input type="text" id="print-title" class="print-input" placeholder="Kortets titel…" />
+      </div>
+      <div id="print-hint">
+        Pan kortet for at justere udsnit — den blå ramme viser præcis hvad der printes.
+      </div>
+      <button id="print-dl-btn" onclick="downloadPdf()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Printramme ─────────────────────────────────────────────────────────── -->
+  <div id="print-frame">
+    <div id="print-frame-label"></div>
   </div>
 
   <!-- ── Lagkatalog panel ──────────────────────────────────────────────────── -->
@@ -307,7 +589,8 @@
       container: 'map',
       style: 'https://widget.cdn.septima.dk/latest/data/vectortiles/redata.json',
       center: [10.2, 56.15],
-      zoom: 7
+      zoom: 7,
+      preserveDrawingBuffer: true
     });
     map.addControl(new maplibregl.NavigationControl(), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 100, unit: 'metric' }), 'bottom-left');
@@ -836,6 +1119,359 @@
       document.getElementById('route-time').textContent = '';
       document.getElementById('route-info').classList.remove('visible');
     }
+
+    // ── PDF Udskrift ──────────────────────────────────────────────────────────
+    const PAPER_DIMS = {
+      a4: { portrait: [210, 297], landscape: [297, 210] },
+      a3: { portrait: [297, 420], landscape: [420, 297] }
+    };
+    const PRINT_MARGIN = 10; // mm
+
+    let printOpen        = false;
+    let printPaper       = 'a4';
+    let printOrientation = 'portrait';
+
+    function getPrintAreaMm() {
+      const [pw, ph] = PAPER_DIMS[printPaper][printOrientation];
+      return { w: pw - 2 * PRINT_MARGIN, h: ph - 2 * PRINT_MARGIN };
+    }
+
+    function togglePrintPanel() {
+      printOpen = !printOpen;
+      document.getElementById('print-panel').classList.toggle('open', printOpen);
+      document.getElementById('btn-print').classList.toggle('active', printOpen);
+      document.getElementById('print-frame').style.display = printOpen ? 'block' : 'none';
+      if (printOpen) {
+        updatePrintFrame();
+        applyPrintScale();
+      }
+    }
+
+    function setPrintPaper(paper) {
+      printPaper = paper;
+      const btns = document.querySelectorAll('#paper-btns .profile-btn');
+      btns[0].classList.toggle('active', paper === 'a4');
+      btns[1].classList.toggle('active', paper === 'a3');
+      updatePrintFrame();
+      applyPrintScale();
+    }
+
+    function setPrintOrientation(ori) {
+      printOrientation = ori;
+      const btns = document.querySelectorAll('#ori-btns .profile-btn');
+      btns[0].classList.toggle('active', ori === 'portrait');
+      btns[1].classList.toggle('active', ori === 'landscape');
+      updatePrintFrame();
+      applyPrintScale();
+    }
+
+    function updatePrintFrame() {
+      const area   = getPrintAreaMm();
+      const aspect = area.w / area.h;
+      const canvas = map.getCanvas();
+      const maxW   = canvas.clientWidth  * 0.68;
+      const maxH   = canvas.clientHeight * 0.74;
+
+      let frameW, frameH;
+      if (maxW / aspect <= maxH) {
+        frameW = maxW;
+        frameH = maxW / aspect;
+      } else {
+        frameH = maxH;
+        frameW = maxH * aspect;
+      }
+
+      const frame = document.getElementById('print-frame');
+      frame.style.width  = frameW + 'px';
+      frame.style.height = frameH + 'px';
+
+      // Opdater label
+      const scale  = parseInt(document.getElementById('print-scale').value);
+      const paper  = printPaper.toUpperCase();
+      const ori    = printOrientation === 'portrait' ? 'stående' : 'liggende';
+      document.getElementById('print-frame-label').textContent =
+        `${paper} ${ori} · 1:${scale.toLocaleString('da-DK')}`;
+    }
+
+    // Beregn zoom ud fra målestok, breddegrad og rammestørrelse i pixels
+    function scaleToZoom(scaleDenom, lat, framePxW, areaMmW) {
+      const groundW_m = (areaMmW / 1000) * scaleDenom;
+      const R   = 6378137;
+      const C   = 2 * Math.PI * R * Math.cos(lat * Math.PI / 180) / 256;
+      return Math.log2(framePxW * C / groundW_m);
+    }
+
+    function applyPrintScale() {
+      const scale = parseInt(document.getElementById('print-scale').value);
+      const lat   = map.getCenter().lat;
+      const frame = document.getElementById('print-frame');
+      const area  = getPrintAreaMm();
+      const framePxW = parseFloat(frame.style.width) || frame.offsetWidth;
+      if (!framePxW) return;
+      const zoom = scaleToZoom(scale, lat, framePxW, area.w);
+      map.setZoom(zoom);
+      updatePrintFrame(); // opdater label
+    }
+
+    async function downloadPdf() {
+      const btn = document.getElementById('print-dl-btn');
+      btn.disabled = true;
+      btn.textContent = 'Genererer…';
+
+      // Vent til kortet er stille (alle tiles loadet)
+      await new Promise(resolve => {
+        if (!map.isMoving() && !map.isZooming()) resolve();
+        else map.once('idle', resolve);
+      });
+
+      try {
+        const { jsPDF } = window.jspdf;
+
+        const area  = getPrintAreaMm();
+        const scale = parseInt(document.getElementById('print-scale').value);
+        const title = document.getElementById('print-title').value.trim();
+
+        // Find frame-position relativt til map-canvas
+        const mapCanvas = map.getCanvas();
+        const mapRect   = mapCanvas.getBoundingClientRect();
+        const frame     = document.getElementById('print-frame');
+        const frameRect = frame.getBoundingClientRect();
+
+        const dpr = window.devicePixelRatio || 1;
+        const sx  = Math.round((frameRect.left - mapRect.left) * dpr);
+        const sy  = Math.round((frameRect.top  - mapRect.top)  * dpr);
+        const sw  = Math.round(frameRect.width  * dpr);
+        const sh  = Math.round(frameRect.height * dpr);
+
+        // Klip frame-region ud til temp canvas
+        const tmp = document.createElement('canvas');
+        tmp.width  = sw;
+        tmp.height = sh;
+        tmp.getContext('2d').drawImage(mapCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+        const imgData = tmp.toDataURL('image/jpeg', 0.93);
+
+        // Opret PDF
+        const [paperW, paperH] = PAPER_DIMS[printPaper][printOrientation];
+        const ori = printOrientation === 'portrait' ? 'p' : 'l';
+        const doc = new jsPDF({ orientation: ori, unit: 'mm', format: printPaper });
+
+        const m = PRINT_MARGIN;
+
+        // Kortbillede dækker hele printarealet
+        doc.addImage(imgData, 'JPEG', m, m, area.w, area.h);
+
+        // Titel (overlay øverst i kortbilledet)
+        if (title) {
+          doc.setFillColor(255, 255, 255);
+          doc.setDrawColor(255, 255, 255);
+          doc.roundedRect(m, m, area.w, 12, 1, 1, 'F');
+          doc.setFontSize(13);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(30, 30, 30);
+          doc.text(title, m + 4, m + 8);
+        }
+
+        // Footerinfo (målestok + dato)
+        const footerY = m + area.h - 1;
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(255, 255, 255);
+        doc.roundedRect(m, footerY - 5, area.w, 7, 1, 1, 'F');
+        doc.setTextColor(60, 60, 60);
+        doc.text(`Målestok 1:${scale.toLocaleString('da-DK')}`, m + 2, footerY + 0.5);
+        doc.text(new Date().toLocaleDateString('da-DK'), m + area.w - 2, footerY + 0.5, { align: 'right' });
+
+        doc.save(`kort_1-${scale}.pdf`);
+      } catch (err) {
+        console.error('PDF fejl:', err);
+        alert('PDF-generering fejlede. Se konsollen for detaljer.');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download PDF`;
+      }
+    }
+
+    // Opdater printramme-label når kortet zoomer (mens panelet er åbent)
+    map.on('zoom', () => {
+      if (!printOpen) return;
+      const frame = document.getElementById('print-frame');
+      const scale  = parseInt(document.getElementById('print-scale').value);
+      const paper  = printPaper.toUpperCase();
+      const ori    = printOrientation === 'portrait' ? 'stående' : 'liggende';
+      document.getElementById('print-frame-label').textContent =
+        `${paper} ${ori} · 1:${scale.toLocaleString('da-DK')}`;
+    });
+
+    // ── Søgefelt ──────────────────────────────────────────────────────────────
+    const REDATA_SERVICE = 'https://redata-postgrest.septima.dk';
+    const REDATA_TOKEN   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoicHJvZF9yZWRhdGFfcmVhZCIsImV4cCI6MjI3ODEwMjc3MH0.o6wwzNNMk799XRho1xhODw35eDYkJcAjf61-RJzVkCo';
+
+    // EPSG:25832 (UTM zone 32N) → WGS84
+    function utm32toWGS84(east, north) {
+      const a = 6378137, e2 = 0.00669437999014, k0 = 0.9996, lon0 = 9 * Math.PI / 180;
+      const x = east - 500000, M = north / k0;
+      const mu = M / (a * (1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256));
+      const e1 = (1 - Math.sqrt(1-e2)) / (1 + Math.sqrt(1-e2));
+      const p1 = mu + (3*e1/2 - 27*e1**3/32)*Math.sin(2*mu) + (21*e1**2/16 - 55*e1**4/32)*Math.sin(4*mu)
+               + 151*e1**3/96*Math.sin(6*mu) + 1097*e1**4/512*Math.sin(8*mu);
+      const N1 = a/Math.sqrt(1 - e2*Math.sin(p1)**2);
+      const T1 = Math.tan(p1)**2, C1 = e2*Math.cos(p1)**2/(1-e2);
+      const R1 = a*(1-e2)/Math.pow(1-e2*Math.sin(p1)**2, 1.5);
+      const D  = x/(N1*k0);
+      const lat = p1 - N1*Math.tan(p1)/R1*(D**2/2 - (5+3*T1+10*C1-4*C1**2-9*e2)*D**4/24
+                + (61+90*T1+298*C1+45*T1**2-252*e2-3*C1**2)*D**6/720);
+      const lng = lon0 + (D - (1+2*T1+C1)*D**3/6 + (5-2*C1+28*T1-3*C1**2+8*e2+24*T1**2)*D**5/120)/Math.cos(p1);
+      return [lng*180/Math.PI, lat*180/Math.PI];
+    }
+
+    let searchTimer   = null;
+    let searchResults = [];
+    let searchActive  = -1;
+
+    function onSearchInput(value) {
+      document.getElementById('search-clear').style.display = value ? 'block' : 'none';
+      clearTimeout(searchTimer);
+      if (!value.trim()) { closeSearch(); return; }
+      searchTimer = setTimeout(() => doSearch(value.trim()), 220);
+    }
+
+    async function doSearch(q) {
+      const enc = encodeURIComponent(q);
+      try {
+        const [addrResp, stedResp, cvrResp] = await Promise.all([
+          fetch(`https://api.dataforsyningen.dk/adresser/autocomplete?q=${enc}&per_side=5`),
+          fetch(`https://api.dataforsyningen.dk/stednavne2/autocomplete?q=${enc}&per_side=3`),
+          fetch(`${REDATA_SERVICE}/virksomhed?navn=ilike.${enc}*&limit=5&select=cvrnummer,navn,adresse,geometri,sammensatstatus`,
+            { headers: { 'Authorization': `Bearer ${REDATA_TOKEN}` } })
+        ]);
+        const [addrData, stedData, cvrData] = await Promise.all([
+          addrResp.json(), stedResp.json(), cvrResp.json()
+        ]);
+
+        searchResults = [];
+        searchActive  = -1;
+
+        // Adresser
+        addrData.forEach(item => searchResults.push({
+          label: item.tekst,
+          type:  'adresse',
+          lng:   item.adresse.x,
+          lat:   item.adresse.y,
+          zoom:  17
+        }));
+
+        // Stednavne
+        stedData.forEach(item => {
+          const geom = item.stednavn?.visueltcenter || item.stednavn?.bbox;
+          if (!geom) return;
+          searchResults.push({ label: item.tekst || item.stednavn?.navn, type: 'sted', lng: geom[0], lat: geom[1], zoom: 13 });
+        });
+
+        // Virksomheder (koordinater fra EPSG:25832)
+        if (Array.isArray(cvrData)) {
+          cvrData.forEach(v => {
+            const coords = v.geometri?.coordinates;
+            if (!coords) return;
+            const [lng, lat] = utm32toWGS84(coords[0], coords[1]);
+            searchResults.push({
+              label:   v.navn,
+              sub:     v.adresse,
+              type:    'virksomhed',
+              aktiv:   v.sammensatstatus === 'Normal',
+              cvr:     v.cvrnummer,
+              lng, lat, zoom: 16
+            });
+          });
+        }
+
+        renderSearchResults();
+      } catch (err) {
+        console.error('Søgefejl:', err);
+      }
+    }
+
+    function renderSearchResults() {
+      const box = document.getElementById('search-results');
+      if (!searchResults.length) {
+        box.innerHTML = '<div class="search-no-results">Ingen resultater</div>';
+        box.style.display = 'block';
+        return;
+      }
+
+      const icons = {
+        adresse:    `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`,
+        sted:       `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+        virksomhed: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>`
+      };
+
+      const groups = ['adresse', 'sted', 'virksomhed'];
+      const labels = { adresse: 'Adresser', sted: 'Stednavne', virksomhed: 'Virksomheder' };
+
+      let html = '';
+      let lastType = null;
+      searchResults.forEach((r, i) => {
+        if (r.type !== lastType) {
+          html += `<div class="search-group-label">${labels[r.type]}</div>`;
+          lastType = r.type;
+        }
+        const inaktiv = r.type === 'virksomhed' && !r.aktiv
+          ? ' <span style="font-size:10px;color:#e57373;margin-left:4px">ophørt</span>' : '';
+        const sub = r.sub ? `<span class="search-result-sub">${escHtml(r.sub)}</span>` : '';
+        html += `<div class="search-result-item" data-idx="${i}" onclick="selectSearchResult(${i})">
+          ${icons[r.type]}<span>${escHtml(r.label)}${inaktiv}</span>${sub}</div>`;
+      });
+
+      box.innerHTML = html;
+      box.style.display = 'block';
+    }
+
+    function selectSearchResult(idx) {
+      const r = searchResults[idx];
+      if (!r) return;
+      map.flyTo({ center: [r.lng, r.lat], zoom: r.zoom, speed: 1.6 });
+      document.getElementById('search-input').value = r.label;
+      closeSearch();
+    }
+
+    function closeSearch() {
+      document.getElementById('search-results').style.display = 'none';
+      searchResults = [];
+      searchActive  = -1;
+    }
+
+    function clearSearch() {
+      document.getElementById('search-input').value = '';
+      document.getElementById('search-clear').style.display = 'none';
+      closeSearch();
+    }
+
+    function onSearchKeydown(e) {
+      const items = document.querySelectorAll('.search-result-item');
+      if (!items.length) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        searchActive = Math.min(searchActive + 1, items.length - 1);
+        items.forEach((el, i) => el.classList.toggle('active', i === searchActive));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        searchActive = Math.max(searchActive - 1, 0);
+        items.forEach((el, i) => el.classList.toggle('active', i === searchActive));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (searchActive >= 0) selectSearchResult(searchActive);
+        else if (searchResults.length) selectSearchResult(0);
+      } else if (e.key === 'Escape') {
+        closeSearch();
+        document.getElementById('search-input').blur();
+      }
+    }
+
+    // Luk dropdown ved klik udenfor søgefeltet
+    document.addEventListener('click', e => {
+      if (!document.getElementById('search-box').contains(e.target)) closeSearch();
+    });
   </script>
 </body>
 </html>

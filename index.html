@@ -154,6 +154,57 @@
       display: none; flex-shrink: 0;
     }
     #catalog-more:hover { background: #f5f5f5; }
+
+    /* ── Ruteprofil-knapper ───────────────────────────────────────────────────── */
+    .profile-row {
+      display: flex;
+      gap: 3px;
+    }
+    .profile-btn {
+      flex: 1;
+      padding: 5px 2px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1.5px solid #e0e0e0;
+      border-radius: 5px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: background 0.1s, border-color 0.1s, color 0.1s;
+    }
+    .profile-btn:hover  { background: #f5f5f5; border-color: #bbb; }
+    .profile-btn.active { background: #e8f0fe; border-color: #4285f4; color: #1558c0; }
+
+    /* ── Ruteinfo-panel ──────────────────────────────────────────────────────── */
+    #route-info {
+      position: absolute;
+      bottom: 42px;
+      left: 10px;
+      z-index: 10;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.18);
+      padding: 10px 14px;
+      font-family: system-ui, -apple-system, sans-serif;
+      display: none;
+      min-width: 160px;
+    }
+    #route-info.visible { display: block; }
+    .route-stat { font-size: 13px; color: #555; margin-bottom: 2px; }
+    .route-stat strong { color: #1558c0; font-size: 15px; }
+    #route-hint { font-size: 11px; color: #aaa; margin-bottom: 6px; }
+    #route-clear-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 5px;
+      font-size: 12px;
+      border: 1.5px solid #ddd;
+      border-radius: 5px;
+      background: #fff;
+      cursor: pointer;
+      color: #555;
+    }
+    #route-clear-btn:hover { background: #fdecea; border-color: #e53935; color: #c62828; }
   </style>
 </head>
 <body>
@@ -206,6 +257,30 @@
       </svg>
       Slet valgte
     </button>
+
+    <div class="divider"></div>
+    <span class="section-label">Rute</span>
+    <button class="tool-btn" id="btn-route" onclick="toggleRouteMode()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/>
+        <path d="M6 17V9a4 4 0 0 1 4-4h4"/>
+        <polyline points="15 3 18 5 15 7"/>
+      </svg>
+      Rute
+    </button>
+    <div class="profile-row" id="route-profiles" style="display:none">
+      <button class="profile-btn active" id="prof-car"     onclick="setRouteProfile('car')">Bil</button>
+      <button class="profile-btn"        id="prof-foot"    onclick="setRouteProfile('foot')">Fod</button>
+      <button class="profile-btn"        id="prof-bicycle" onclick="setRouteProfile('bicycle')">Cykel</button>
+    </div>
+  </div>
+
+  <!-- ── Ruteinfo-panel ───────────────────────────────────────────────────── -->
+  <div id="route-info">
+    <div id="route-hint"></div>
+    <div class="route-stat">&#x1F6E3; <strong id="route-dist"></strong></div>
+    <div class="route-stat">&#x23F1; <strong id="route-time"></strong></div>
+    <button id="route-clear-btn" onclick="clearRoute()">Ryd rute</button>
   </div>
 
   <!-- ── Lagkatalog panel ──────────────────────────────────────────────────── -->
@@ -358,13 +433,35 @@
           if (fid) selectFeature(fid);
         });
         map.on('mouseenter', lid, () => {
-          if (currentMode === 'simple_select') map.getCanvas().style.cursor = 'pointer';
+          if (currentMode === 'simple_select' && !routeMode) map.getCanvas().style.cursor = 'pointer';
         });
-        map.on('mouseleave', lid, () => { map.getCanvas().style.cursor = ''; });
+        map.on('mouseleave', lid, () => {
+          if (!routeMode) map.getCanvas().style.cursor = '';
+        });
       });
 
-      // Klik på tomt kort → deselect
-      map.on('click', () => {
+      // Klik på tomt kort → deselect / rutepunkt
+      map.on('click', e => {
+        if (routeMode) {
+          const lngLat = [e.lngLat.lng, e.lngLat.lat];
+          if (!routeStart) {
+            routeStart = lngLat;
+            updateRouteMarkers();
+            showRouteHint('Klik for at vælge slutpunkt');
+          } else if (!routeEnd) {
+            routeEnd = lngLat;
+            updateRouteMarkers();
+            fetchRoute();
+          } else {
+            // Nyt startpunkt
+            routeStart = lngLat;
+            routeEnd   = null;
+            clearRouteDisplay();
+            updateRouteMarkers();
+            showRouteHint('Klik for at vælge slutpunkt');
+          }
+          return;
+        }
         if (hitFeature) { hitFeature = false; return; }
         if (currentMode === 'simple_select') deselect();
       });
@@ -387,6 +484,13 @@
 
     // ── Toolbar ───────────────────────────────────────────────────────────────
     function setMode(mode) {
+      // Forlad rutetilstand hvis et tegneværktøj aktiveres
+      if (routeMode && mode !== 'simple_select') {
+        routeMode = false;
+        document.getElementById('btn-route').classList.remove('active');
+        document.getElementById('route-profiles').style.display = 'none';
+        map.getCanvas().style.cursor = '';
+      }
       currentMode = mode;
       draw.changeMode(mode);
       updateActiveBtn(mode);
@@ -595,6 +699,142 @@
       if (!btn) return;
       btn.textContent = added ? '✓ Fjern' : '+ Tilføj';
       btn.classList.toggle('added', added);
+    }
+
+    // ── Ruteberegning ─────────────────────────────────────────────────────────
+    const ROUTE_API_KEY = 'redata-MEHLAXTEL79B';
+    const ROUTE_BASE    = 'https://rute.septima.dk';
+
+    let routeMode    = false;
+    let routeProfile = 'car';
+    let routeStart   = null;   // [lng, lat]
+    let routeEnd     = null;   // [lng, lat]
+    let startMarker  = null;
+    let endMarker    = null;
+
+    function toggleRouteMode() {
+      routeMode = !routeMode;
+      document.getElementById('btn-route').classList.toggle('active', routeMode);
+      document.getElementById('route-profiles').style.display = routeMode ? '' : 'none';
+      if (routeMode) {
+        // Deaktiver tegneværktøjer
+        draw.changeMode('simple_select');
+        currentMode = 'simple_select';
+        updateActiveBtn('simple_select');
+        deselect();
+        map.getCanvas().style.cursor = 'crosshair';
+        showRouteHint('Klik for at vælge startpunkt');
+        document.getElementById('route-info').classList.add('visible');
+      } else {
+        map.getCanvas().style.cursor = '';
+        // Fjern hint hvis ingen rute
+        if (!routeStart && !routeEnd) {
+          document.getElementById('route-info').classList.remove('visible');
+        }
+      }
+    }
+
+    function setRouteProfile(profile) {
+      routeProfile = profile;
+      ['car', 'foot', 'bicycle'].forEach(p => {
+        document.getElementById(`prof-${p}`).classList.toggle('active', p === profile);
+      });
+      if (routeStart && routeEnd) fetchRoute();
+    }
+
+    function showRouteHint(msg) {
+      document.getElementById('route-hint').textContent = msg;
+      document.getElementById('route-dist').textContent = '';
+      document.getElementById('route-time').textContent = '';
+      document.getElementById('route-info').classList.add('visible');
+    }
+
+    function updateRouteMarkers() {
+      if (startMarker) { startMarker.remove(); startMarker = null; }
+      if (endMarker)   { endMarker.remove();   endMarker   = null; }
+
+      if (routeStart) {
+        const el = document.createElement('div');
+        el.style.cssText = 'width:14px;height:14px;background:#34a853;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,0.4)';
+        startMarker = new maplibregl.Marker({ element: el })
+          .setLngLat(routeStart).addTo(map);
+      }
+      if (routeEnd) {
+        const el = document.createElement('div');
+        el.style.cssText = 'width:14px;height:14px;background:#e53935;border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 5px rgba(0,0,0,0.4)';
+        endMarker = new maplibregl.Marker({ element: el })
+          .setLngLat(routeEnd).addTo(map);
+      }
+    }
+
+    async function fetchRoute() {
+      const coords = `${routeStart[0]},${routeStart[1]};${routeEnd[0]},${routeEnd[1]}`;
+      const url = `${ROUTE_BASE}/route/v1/${routeProfile}/${coords}?overview=full&geometries=geojson`;
+      document.getElementById('route-hint').textContent = 'Beregner rute…';
+      document.getElementById('route-dist').textContent = '';
+      document.getElementById('route-time').textContent = '';
+      try {
+        const resp = await fetch(url, { headers: { 'Authorization': `Bearer ${ROUTE_API_KEY}` } });
+        const data = await resp.json();
+        if (data.code !== 'Ok' || !data.routes?.length) {
+          document.getElementById('route-hint').textContent = 'Ingen rute fundet';
+          return;
+        }
+        renderRoute(data.routes[0]);
+      } catch (err) {
+        document.getElementById('route-hint').textContent = 'Fejl ved ruteberegning';
+        console.error('Route error:', err);
+      }
+    }
+
+    function renderRoute(route) {
+      const geom = { type: 'Feature', geometry: route.geometry };
+      const src = map.getSource('route-line');
+      if (src) {
+        src.setData(geom);
+      } else {
+        map.addSource('route-line', { type: 'geojson', data: geom });
+        const before = map.getLayer('drawn-poly-fill') ? 'drawn-poly-fill' : undefined;
+        map.addLayer({ id: 'route-line-bg', type: 'line', source: 'route-line',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#fff', 'line-width': 8 }
+        }, before);
+        map.addLayer({ id: 'route-line-fg', type: 'line', source: 'route-line',
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-color': '#4285f4', 'line-width': 5 }
+        }, before);
+      }
+
+      const dist = route.distance >= 1000
+        ? (route.distance / 1000).toFixed(1) + ' km'
+        : Math.round(route.distance) + ' m';
+      const secs = route.duration;
+      const time = secs >= 3600
+        ? `${Math.floor(secs / 3600)} t ${Math.round((secs % 3600) / 60)} min`
+        : `${Math.round(secs / 60)} min`;
+
+      document.getElementById('route-hint').textContent = '';
+      document.getElementById('route-dist').textContent = dist;
+      document.getElementById('route-time').textContent = time;
+    }
+
+    function clearRoute() {
+      routeStart = null;
+      routeEnd   = null;
+      if (startMarker) { startMarker.remove(); startMarker = null; }
+      if (endMarker)   { endMarker.remove();   endMarker   = null; }
+      clearRouteDisplay();
+      if (routeMode) showRouteHint('Klik for at vælge startpunkt');
+      else document.getElementById('route-info').classList.remove('visible');
+    }
+
+    function clearRouteDisplay() {
+      if (map.getLayer('route-line-fg')) map.removeLayer('route-line-fg');
+      if (map.getLayer('route-line-bg')) map.removeLayer('route-line-bg');
+      if (map.getSource('route-line'))   map.removeSource('route-line');
+      document.getElementById('route-dist').textContent = '';
+      document.getElementById('route-time').textContent = '';
+      document.getElementById('route-info').classList.remove('visible');
     }
   </script>
 </body>

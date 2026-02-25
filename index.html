@@ -456,6 +456,116 @@
       white-space: nowrap;
       letter-spacing: 0.1px;
     }
+
+    /* ── Layout varianter ──────────────────────────────────────────────────── */
+
+    /* ──── TOPBAR ──── */
+    body[data-layout="topbar"] #toolbar {
+      top: 0; left: 0; right: 0; bottom: auto;
+      width: auto; height: 48px;
+      flex-direction: row; align-items: center;
+      border-radius: 0;
+      border: none; border-bottom: 1px solid var(--c-border);
+      padding: 0 10px; gap: 0;
+      box-shadow: var(--shadow-sm);
+    }
+    body[data-layout="topbar"] #toolbar .section-label { display: none; }
+    body[data-layout="topbar"] #toolbar .divider { width: 1px; height: 26px; background: var(--c-border); margin: 0 3px; }
+    body[data-layout="topbar"] #toolbar .tool-btn { white-space: nowrap; width: auto; padding: 6px 9px; }
+    body[data-layout="topbar"] #toolbar .color-row { padding: 0 4px; gap: 4px; }
+    body[data-layout="topbar"] #toolbar .color-row label { display: none; }
+    body[data-layout="topbar"] #toolbar #route-profiles { display: none !important; }
+    body[data-layout="topbar"] #search-box { top: 56px; left: 12px; }
+    body[data-layout="topbar"] #route-info { bottom: 12px; }
+    body[data-layout="topbar"] #measure-info { bottom: 12px; }
+    body[data-layout="topbar"] .maplibregl-ctrl-top-left { top: 48px; }
+    body[data-layout="topbar"] .maplibregl-ctrl-top-right { top: 48px; }
+
+    /* ──── BOTTOMBAR ──── */
+    body[data-layout="bottombar"] #toolbar {
+      bottom: 0; left: 0; right: 0; top: auto;
+      width: auto; height: 52px;
+      flex-direction: row; align-items: center;
+      border-radius: 0;
+      border: none; border-top: 1px solid var(--c-border);
+      padding: 0 10px; gap: 0;
+      box-shadow: none;
+    }
+    body[data-layout="bottombar"] #toolbar .section-label { display: none; }
+    body[data-layout="bottombar"] #toolbar .divider { width: 1px; height: 26px; background: var(--c-border); margin: 0 3px; }
+    body[data-layout="bottombar"] #toolbar .tool-btn { white-space: nowrap; width: auto; padding: 6px 9px; }
+    body[data-layout="bottombar"] #toolbar .color-row { padding: 0 4px; gap: 4px; }
+    body[data-layout="bottombar"] #toolbar .color-row label { display: none; }
+    body[data-layout="bottombar"] #toolbar #route-profiles { display: none !important; }
+    body[data-layout="bottombar"] #search-box { top: 12px; left: 12px; }
+    body[data-layout="bottombar"] #route-info { bottom: 60px; left: 12px; }
+    body[data-layout="bottombar"] #measure-info { bottom: 60px; left: 12px; }
+    body[data-layout="bottombar"] .maplibregl-ctrl-bottom-left { bottom: 56px; }
+    body[data-layout="bottombar"] .maplibregl-ctrl-bottom-right { bottom: 56px; }
+    body[data-layout="bottombar"] #layout-btn { bottom: 62px; }
+    body[data-layout="bottombar"] #layout-panel { bottom: 106px; }
+
+    /* ──── ICONBAR ──── */
+    body[data-layout="iconbar"] #toolbar { width: 48px; padding: 6px 4px; }
+    body[data-layout="iconbar"] #toolbar .section-label { display: none; }
+    body[data-layout="iconbar"] #toolbar .tool-btn {
+      width: 38px; height: 38px; padding: 0;
+      justify-content: center; font-size: 0;
+    }
+    body[data-layout="iconbar"] #toolbar .tool-btn svg { flex-shrink: 0; }
+    body[data-layout="iconbar"] #toolbar .color-row { display: none; }
+    body[data-layout="iconbar"] #toolbar #route-profiles { display: none !important; }
+    body[data-layout="iconbar"] #search-box { left: 62px; }
+    body[data-layout="iconbar"] #route-info { left: 62px; }
+    body[data-layout="iconbar"] #measure-info { left: 62px; }
+
+    /* ── Layout-picker knap + panel ──────────────────────────────────────────── */
+    #layout-btn {
+      position: fixed;
+      bottom: 40px; right: 12px;
+      z-index: 15;
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: var(--c-bg);
+      border: 1px solid var(--c-border);
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--c-text-2);
+      transition: background 0.12s, color 0.12s, box-shadow 0.12s;
+    }
+    #layout-btn:hover { background: var(--c-bg-hover); color: var(--c-text); box-shadow: var(--shadow-md); }
+    #layout-btn.active { background: var(--c-primary-bg); color: var(--c-primary); border-color: var(--c-primary-bd); }
+    #layout-panel {
+      position: fixed;
+      bottom: 82px; right: 12px;
+      z-index: 15;
+      background: var(--c-bg);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-lg);
+      border: 1px solid var(--c-border);
+      padding: 10px;
+      display: none;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      font-family: var(--font);
+      width: 200px;
+    }
+    #layout-panel.open { display: grid; }
+    .layout-opt {
+      display: flex; flex-direction: column; align-items: center;
+      padding: 8px 6px 6px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      border: 2px solid transparent;
+      background: var(--c-bg-subtle);
+      transition: border-color 0.12s, background 0.12s;
+      text-align: center;
+    }
+    .layout-opt:hover { background: var(--c-bg-hover); }
+    .layout-opt.active { border-color: var(--c-primary); background: var(--c-primary-bg); }
+    .layout-opt span { font-size: 10.5px; font-weight: 500; color: var(--c-text-2); margin-top: 5px; }
+    .layout-opt.active span { color: var(--c-primary); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -567,6 +677,13 @@
       </svg>
       Areal
     </button>
+
+    <div class="divider"></div>
+    <span class="section-label">Baggrund</span>
+    <div class="profile-row" id="basemap-btns">
+      <button class="profile-btn active" id="bm-vector"   onclick="setBasemap('vector')">Kort</button>
+      <button class="profile-btn"        id="bm-ortofoto" onclick="setBasemap('ortofoto')">Foto</button>
+    </div>
   </div>
 
   <!-- ── Ruteinfo-panel ───────────────────────────────────────────────────── -->
@@ -714,8 +831,35 @@
       );
     }
 
-    // ── Initialiser sources & layers når kortet er klar ───────────────────────
-    map.on('load', () => {
+    // ── Baggrundskort ─────────────────────────────────────────────────────────
+    const VECTOR_STYLE_URL = 'https://widget.cdn.septima.dk/latest/data/vectortiles/redata.json';
+    const ORTOFOTO_STYLE = {
+      version: 8,
+      sources: {
+        'ortofoto': {
+          type: 'raster',
+          tiles: ['https://services.datafordeler.dk/GeoDanmarkOrto/orto_foraar_webm/1.0.0/wmts?username=AGZTLXPJJK&password=dCu!FNMpnbf7DGm&layer=orto_foraar_webm&style=default&tilematrixset=DFD_GoogleMapsCompatible&Service=WMTS&Request=GetTile&Version=1.0.0&Format=image%2Fjpeg&TileMatrix={z}&TileCol={x}&TileRow={y}'],
+          tileSize: 256,
+          attribution: '© Styrelsen for Dataforsyning og Infrastruktur'
+        }
+      },
+      layers: [{ id: 'ortofoto-bg', type: 'raster', source: 'ortofoto' }]
+    };
+    let currentBasemap = 'vector';
+
+    function setBasemap(type) {
+      if (type === currentBasemap) return;
+      currentBasemap = type;
+      document.getElementById('bm-vector').classList.toggle('active',   type === 'vector');
+      document.getElementById('bm-ortofoto').classList.toggle('active', type === 'ortofoto');
+      map.setStyle(type === 'ortofoto' ? ORTOFOTO_STYLE : VECTOR_STYLE_URL);
+      map.once('styledata', initCustomLayers);
+    }
+
+    let _mapClickHandlerSet = false;
+
+    // ── Initialiser sources & layers (kaldes ved load + basemap-skift) ──────────
+    function initCustomLayers() {
 
       map.addSource('drawn', {
         type: 'geojson',
@@ -832,44 +976,55 @@
         });
       });
 
-      // Klik på tomt kort → mål / deselect / rutepunkt
-      map.on('click', e => {
-        if (measureMode && !measureFinished) {
-          clearTimeout(measureClickTimer);
-          const pt = [e.lngLat.lng, e.lngLat.lat];
-          measureClickTimer = setTimeout(() => {
-            measurePoints.push(pt);
-            updateMeasureDisplay();
-          }, 250);
-          return;
-        }
-        if (addedWmsLayers.size > 0 && !measureMode && !routeMode && currentMode === 'simple_select') {
-          queryWmsAtPoint(e.lngLat, e.point);
-        }
-        if (routeMode) {
-          const lngLat = [e.lngLat.lng, e.lngLat.lat];
-          if (!routeStart) {
-            routeStart = lngLat;
-            updateRouteMarkers();
-            showRouteHint('Klik for at vælge slutpunkt');
-          } else if (!routeEnd) {
-            routeEnd = lngLat;
-            updateRouteMarkers();
-            fetchRoute();
-          } else {
-            // Nyt startpunkt
-            routeStart = lngLat;
-            routeEnd   = null;
-            clearRouteDisplay();
-            updateRouteMarkers();
-            showRouteHint('Klik for at vælge slutpunkt');
+      // Klik på tomt kort (registreres kun én gang — overlever basemap-skift)
+      if (!_mapClickHandlerSet) {
+        map.on('click', e => {
+          if (measureMode && !measureFinished) {
+            clearTimeout(measureClickTimer);
+            const pt = [e.lngLat.lng, e.lngLat.lat];
+            measureClickTimer = setTimeout(() => {
+              measurePoints.push(pt);
+              updateMeasureDisplay();
+            }, 250);
+            return;
           }
-          return;
-        }
-        if (hitFeature) { hitFeature = false; return; }
-        if (currentMode === 'simple_select') deselect();
-      });
-    });
+          if (addedWmsLayers.size > 0 && !measureMode && !routeMode && currentMode === 'simple_select') {
+            queryWmsAtPoint(e.lngLat, e.point);
+          }
+          if (routeMode) {
+            const lngLat = [e.lngLat.lng, e.lngLat.lat];
+            if (!routeStart) {
+              routeStart = lngLat;
+              updateRouteMarkers();
+              showRouteHint('Klik for at vælge slutpunkt');
+            } else if (!routeEnd) {
+              routeEnd = lngLat;
+              updateRouteMarkers();
+              fetchRoute();
+            } else {
+              routeStart = lngLat;
+              routeEnd   = null;
+              clearRouteDisplay();
+              updateRouteMarkers();
+              showRouteHint('Klik for at vælge slutpunkt');
+            }
+            return;
+          }
+          if (hitFeature) { hitFeature = false; return; }
+          if (currentMode === 'simple_select') deselect();
+        });
+        _mapClickHandlerSet = true;
+      }
+
+      // ── Genopret data efter basemap-skift ──────────────────────────────────
+      refreshDrawn();
+      refreshSelected();
+      if (measureMode) updateMeasureDisplay();
+      const wmsIds = Array.from(addedWmsLayers.keys());
+      wmsIds.forEach(id => { addedWmsLayers.delete(id); addWmsLayer(id); });
+    }
+
+    map.on('load', initCustomLayers);
 
     // ── Mål: dblclick + mousemove ─────────────────────────────────────────────
     map.on('dblclick', e => {
@@ -1859,6 +2014,78 @@
         .addTo(map);
       wmsPopup.on('close', () => { wmsPopup = null; });
     }
+    // ── Layout-vælger ─────────────────────────────────────────────────────────
+    function setLayout(name) {
+      document.body.dataset.layout = name;
+      localStorage.setItem('mapLayout', name);
+      document.querySelectorAll('.layout-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.layout === name);
+      });
+      document.getElementById('layout-panel').classList.remove('open');
+      document.getElementById('layout-btn').classList.remove('active');
+    }
+
+    function toggleLayoutPicker() {
+      const panel = document.getElementById('layout-panel');
+      const btn   = document.getElementById('layout-btn');
+      const open  = panel.classList.toggle('open');
+      btn.classList.toggle('active', open);
+    }
+
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#layout-btn') && !e.target.closest('#layout-panel')) {
+        document.getElementById('layout-panel').classList.remove('open');
+        document.getElementById('layout-btn').classList.remove('active');
+      }
+    });
+
+    // Sæt layout synkront for at undgå flash — active-klasser sættes i DOMContentLoaded
+    const _savedLayout = localStorage.getItem('mapLayout') || 'sidebar';
+    document.body.dataset.layout = _savedLayout;
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.layout-opt').forEach(el => {
+        el.classList.toggle('active', el.dataset.layout === _savedLayout);
+      });
+    });
   </script>
+
+  <!-- ── Layout-vælger ───────────────────────────────────────────────────── -->
+  <button id="layout-btn" onclick="toggleLayoutPicker()" title="Skift layout">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+    </svg>
+  </button>
+
+  <div id="layout-panel">
+    <div class="layout-opt" onclick="setLayout('sidebar')" data-layout="sidebar">
+      <svg width="44" height="30" viewBox="0 0 44 30">
+        <rect x="0" y="0" width="44" height="30" rx="3" fill="#e5e7eb"/>
+        <rect x="0" y="0" width="12" height="30" rx="3" fill="#2563eb"/>
+      </svg>
+      <span>Sidebjælke</span>
+    </div>
+    <div class="layout-opt" onclick="setLayout('topbar')" data-layout="topbar">
+      <svg width="44" height="30" viewBox="0 0 44 30">
+        <rect x="0" y="0" width="44" height="30" rx="3" fill="#e5e7eb"/>
+        <rect x="0" y="0" width="44" height="9" rx="3" fill="#2563eb"/>
+      </svg>
+      <span>Topbjælke</span>
+    </div>
+    <div class="layout-opt" onclick="setLayout('bottombar')" data-layout="bottombar">
+      <svg width="44" height="30" viewBox="0 0 44 30">
+        <rect x="0" y="0" width="44" height="30" rx="3" fill="#e5e7eb"/>
+        <rect x="0" y="21" width="44" height="9" rx="3" fill="#2563eb"/>
+      </svg>
+      <span>Bundbjælke</span>
+    </div>
+    <div class="layout-opt" onclick="setLayout('iconbar')" data-layout="iconbar">
+      <svg width="44" height="30" viewBox="0 0 44 30">
+        <rect x="0" y="0" width="44" height="30" rx="3" fill="#e5e7eb"/>
+        <rect x="0" y="0" width="7" height="30" rx="3" fill="#2563eb"/>
+      </svg>
+      <span>Ikonbjælke</span>
+    </div>
+  </div>
 </body>
 </html>
